@@ -15,7 +15,7 @@ const GenericIndex: RediSearchSchema = {
     type: SchemaFieldTypes.VECTOR,
     TYPE: "FLOAT32",
     ALGORITHM: VectorAlgorithms.FLAT,
-    DIM: 3,
+    DIM: 3072, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small
     DISTANCE_METRIC: "COSINE",
     AS: "chunkEmbeddings",
   },
@@ -47,36 +47,37 @@ class RedisVectorStore {
     });
   }
 
-  async addEmbedding(embedding: {
-    chunkId: string;
-    embedding: number[];
-  }) {
-    return this.client.json.set(`${CHUNK_KEY_PREFIX}:${embedding.chunkId}`, "$", {
-      chunkId: embedding.chunkId,
-      chunkEmbeddings: embedding.embedding,
-    });
+  async addEmbedding(embedding: { chunkId: string; embedding: number[] }) {
+    return this.client.json.set(
+      `${CHUNK_KEY_PREFIX}:${embedding.chunkId}`,
+      "$",
+      {
+        chunkId: embedding.chunkId,
+        chunkEmbeddings: embedding.embedding,
+      }
+    );
   }
 
   async knnSearchEmbeddings({
     inputVector,
-    k
+    k,
   }: {
     inputVector: number[];
     k: number;
   }) {
-    console.log(inputVector);
+    //console.log(inputVector);
     const query = `*=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
-     return this.client.ft.search(INDEX_KEY, query, {
+    return this.client.ft.search(INDEX_KEY, query, {
       PARAMS: {
-          "searchBlob": Buffer.from(new Float32Array(inputVector).buffer)
+        searchBlob: Buffer.from(new Float32Array(inputVector).buffer),
       },
       RETURN: ["score", "chunkId"],
       SORTBY: {
-          BY: "score",
-          // DIRECTION: "DESC"
+        BY: "score",
+        // DIRECTION: "DESC"
       },
       DIALECT: 2,
-  });
+    });
   }
 }
 

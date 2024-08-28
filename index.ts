@@ -64,19 +64,27 @@ const createRagger = (embedder: Embedder, vectorStore: VectorStore) => {
 // upload the document
 // extract the text
 const text = `
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+Artificial Intelligence: An Overview
 
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+Artificial Intelligence (AI) is a rapidly evolving field of computer science focused on creating intelligent machines that can perform tasks typically requiring human intelligence. These tasks include visual perception, speech recognition, decision-making, and language translation.
 
-Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. Integer in mauris eu nibh euismod gravida. Duis ac tellus et risus vulputate vehicula.
+Machine Learning, a subset of AI, involves algorithms that enable computers to learn from and make predictions or decisions based on data. Deep Learning, a more specialized form of Machine Learning, uses neural networks with many layers to analyze various factors of data.
 
-Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor congue, eros est euismod turpis, id tincidunt sapien risus a quam. Maecenas fermentum consequat mi. Donec fermentum. Pellentesque malesuada nulla a mi. Duis sapien sem, aliquet nec, commodo eget, consequat quis, neque.
+AI applications are widespread in modern society. In healthcare, AI assists in diagnosing diseases and developing treatment plans. In finance, it's used for fraud detection and algorithmic trading. Self-driving cars rely on AI for navigation and obstacle avoidance. Virtual assistants like Siri and Alexa use AI to understand and respond to voice commands.
+
+Ethical considerations in AI development include issues of privacy, bias in decision-making algorithms, and the potential impact on employment. As AI systems become more advanced, ensuring they align with human values and societal norms becomes increasingly important.
+
+The future of AI holds immense potential. Researchers are working on artificial general intelligence (AGI), which aims to create AI systems with human-like cognitive abilities. Quantum computing may also revolutionize AI, enabling much faster processing of complex algorithms.
 `;
+
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is not set");
+}
 
 // Initialize clients
 const embedder = new OpenAIEmbedder({
   type: "openai",
-  apiKey: "sk-not-today"
+  apiKey: process.env.OPENAI_API_KEY,
 });
 // const vectorStore = createRedisVectorStore("redis://localhost:6379");
 // const ragger = createRagger(embedder, vectorStore);
@@ -90,23 +98,27 @@ const chunks = chunkText(text, {
   strategy: ChunkingStrategy.BY_PARAGRAPH,
 });
 
-// const embeddings = await embedder.embedChunks(chunks);
-const embeddings = [
-  {
-    chunkId: "1",
-    embedding: [1, 2, 3],
-  },
-  {
-    chunkId: "2",
-    embedding: [4, 5, 6],
-  },
-  {
-    chunkId: "3",
-    embedding: [7, 8, 9],
-  },
-];
+const embeddings = await embedder.embedChunks(chunks);
+// const embeddings = [
+//   {
+//     chunkId: "1",
+//     embedding: [1, 2, 3],
+//   },
+//   {
+//     chunkId: "2",
+//     embedding: [4, 5, 6],
+//   },
+//   {
+//     chunkId: "3",
+//     embedding: [7, 8, 9],
+//   },
+// ];
 
-const vectorStore = new RedisVectorStore("redis://localhost:6379");
+if (!process.env.REDIS_URL) {
+  throw new Error("REDIS_URL is not set");
+}
+
+const vectorStore = new RedisVectorStore(process.env.REDIS_URL);
 
 vectorStore.createIndex();
 
@@ -118,20 +130,29 @@ const addEmbeddingPromises = embeddings.map((embedding) => {
 
 await Promise.all(addEmbeddingPromises);
 
-const dumpEmbeddings = async (vectorStore: RedisVectorStore) => {
-  const dump = await vectorStore.client.json.get("chunks:1");
-  console.log("dump", dump);
-};
+// const dumpEmbeddings = async (vectorStore: RedisVectorStore) => {
+//   const dump = await vectorStore.client.json.get("chunks:1");
+//   console.log("dump", dump);
+// };
 
-// Dump the entire Redis database
-await dumpEmbeddings(vectorStore);
+// // Dump the entire Redis database
+// await dumpEmbeddings(vectorStore);
+
+const query = "How does ai affect healthcare?";
+
+const queryVector = await embedder.generateEmbedding(query);
 
 const results = await vectorStore.knnSearchEmbeddings({
-  inputVector: [1, 2, 3],
-  k: 3,
+  inputVector: queryVector,
+  k: 2,
 });
 
 console.log(JSON.stringify(results, null, 2));
 
-vectorStore.client.disconnect();
+const relevantChunks = results.documents;
 
+//get the text of the chunks based on id
+
+console.log(relevantChunks);
+
+vectorStore.client.disconnect();
