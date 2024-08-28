@@ -1,4 +1,14 @@
-const exports = {};
+import OpenAI from "./node_modules/openai/index";
+import RedisVectorStore from "./redis/client";
+import OpenAIEmbedder from "./simple/embedder";
+import chunkText from "./simple/split";
+import {
+  ChunkingStrategy,
+  Embedding,
+  ScoredEmbedding,
+  VectorStore,
+  Embedder,
+} from "./types";
 
 // We want to be able to do RAG
 // -- We need to be able to handle document loading / storage
@@ -7,88 +17,6 @@ const exports = {};
 // We need to be able to store embeddings
 // We need to be able to query embeddings
 // We need to be able to get relevant chunks
-
-interface Metadata {
-  documentId: string;
-  page?: number; // the page number of the document
-}
-
-interface ChunkMetadata {
-  documentId: string;
-  chunkId: string;
-}
-
-interface Document {
-  forgeMetadata: Metadata; // rename built in metadata
-  metadata: Record<string, any>; // user specified metadata
-  text: string;
-}
-
-interface Chunk {
-  forgeMetadata: ChunkMetadata;
-  metadata: Record<string, any>;
-  text: string;
-}
-
-interface Embedding {
-  chunkId: string;
-  embedding: number[];
-}
-
-interface ScoredEmbedding {
-  chunkId: string;
-  embedding: number[];
-  score: number;
-}
-
-interface VectorStore {
-  storeEmbeddings: (embeddings: Embedding[]) => void;
-  retrieveEmbeddings: (chunkIds: string[]) => Embedding[];
-  queryEmbeddings: (query: number[]) => Embedding[];
-  deleteEmbeddings: (chunkIds: string[]) => void;
-}
-
-interface Embedder {
-  generateEmbedding: (text: string) => number[];
-  embedChunks: (chunks: Chunk[]) => Embedding[];
-}
-
-enum ChunkingStrategy {
-  BY_PARAGRAPH = "by_paragraph",
-  BY_SENTENCE = "by_sentence",
-}
-
-// STUB FNs
-const chunk = (
-  text: string,
-  options?: { strategy: ChunkingStrategy }
-): Chunk[] => {
-  return [
-    {
-      text: text,
-      metadata: {
-        strategy: options?.strategy,
-      },
-      forgeMetadata: {
-        documentId: "123",
-        chunkId: "123",
-      },
-    },
-  ];
-};
-
-const embedChunks = (chunks: Chunk[]): Embedding[] => {
-  return chunks.map((chunk) => {
-    return {
-      chunkId: chunk.forgeMetadata.chunkId,
-      embedding: [1, 2, 3],
-    };
-  });
-};
-
-type VectorStoreQueryOptions = {
-  k: number;
-};
 
 const createRedisVectorStore = (url: string): VectorStore => {
   return {
@@ -106,36 +34,22 @@ const createRedisVectorStore = (url: string): VectorStore => {
   };
 };
 
-const createOpenAIEmbedder = (): Embedder => {
-  return {
-    generateEmbedding: (text: string) => {
-      return [1, 2, 3];
-    },
-    embedChunks: (chunks: Chunk[]): Embedding[] => {
-      return chunks.map((chunk) => {
-        return {
-          chunkId: chunk.forgeMetadata.chunkId,
-          embedding: [1, 2, 3],
-        };
-      });
-    },
-  };
-};
-
 const createRagger = (embedder: Embedder, vectorStore: VectorStore) => {
   return {
     embedder,
     vectorStore,
-    query: (query: string) => {
-      const queryVector = embedder.generateEmbedding(query);
+    query: async (query: string) => {
+      const queryVector = await embedder.generateEmbedding(query);
       return vectorStore.queryEmbeddings(queryVector);
     },
-    initializeDocument: (text: string) => {
+    initializeDocument: async (text: string) => {
       // chunk the document
-      const chunks = chunk(text, { strategy: ChunkingStrategy.BY_PARAGRAPH });
+      const chunks = chunkText(text, {
+        strategy: ChunkingStrategy.BY_PARAGRAPH,
+      });
 
       // embed the chunks
-      const embeddings = embedder.embedChunks(chunks);
+      const embeddings = await embedder.embedChunks(chunks);
 
       // store the embeddings in a vector store
       vectorStore.storeEmbeddings(embeddings);
@@ -160,11 +74,64 @@ Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor cong
 `;
 
 // Initialize clients
-const embedder = createOpenAIEmbedder();
-const vectorStore = createRedisVectorStore("redis://localhost:6379");
-const ragger = createRagger(embedder, vectorStore);
+const embedder = new OpenAIEmbedder({
+  type: "openai",
+  apiKey: "sk-not-today"
+});
+// const vectorStore = createRedisVectorStore("redis://localhost:6379");
+// const ragger = createRagger(embedder, vectorStore);
 
-ragger.initializeDocument(text);
+// ragger.initializeDocument(text);
 
-// we query the vector store
-ragger.query("What is the meaning of life?");
+// // we query the vector store
+// ragger.query("What is the meaning of life?");
+
+const chunks = chunkText(text, {
+  strategy: ChunkingStrategy.BY_PARAGRAPH,
+});
+
+// const embeddings = await embedder.embedChunks(chunks);
+const embeddings = [
+  {
+    chunkId: "1",
+    embedding: [1, 2, 3],
+  },
+  {
+    chunkId: "2",
+    embedding: [4, 5, 6],
+  },
+  {
+    chunkId: "3",
+    embedding: [7, 8, 9],
+  },
+];
+
+const vectorStore = new RedisVectorStore("redis://localhost:6379");
+
+vectorStore.createIndex();
+
+const addEmbeddingPromises = embeddings.map((embedding) => {
+  return vectorStore.addEmbedding({
+    ...embedding,
+  });
+});
+
+await Promise.all(addEmbeddingPromises);
+
+const dumpEmbeddings = async (vectorStore: RedisVectorStore) => {
+  const dump = await vectorStore.client.json.get("chunks:1");
+  console.log("dump", dump);
+};
+
+// Dump the entire Redis database
+await dumpEmbeddings(vectorStore);
+
+const results = await vectorStore.knnSearchEmbeddings({
+  inputVector: [1, 2, 3],
+  k: 3,
+});
+
+console.log(JSON.stringify(results, null, 2));
+
+vectorStore.client.disconnect();
+
