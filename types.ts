@@ -28,15 +28,14 @@ interface Embedding {
 
 interface ScoredEmbedding {
   chunkId: string;
-  embedding: number[];
   score: number;
 }
 
 interface VectorStore {
   storeEmbeddings: (embeddings: Embedding[]) => Promise<void>;
-  retrieveEmbeddings: (chunkIds: string[]) => Promise<Embedding[]>;
+  // retrieveEmbeddings: (chunkIds: string[]) => Promise<Embedding[]>;
   queryEmbeddings: (query: number[]) => Promise<ScoredEmbedding[]>;
-  deleteEmbeddings: (chunkIds: string[]) => Promise<void>;
+  // deleteEmbeddings: (chunkIds: string[]) => Promise<void>;
 }
 
 interface Embedder {
@@ -47,6 +46,8 @@ interface Embedder {
 enum ChunkingStrategy {
   BY_PARAGRAPH = "by_paragraph",
   BY_SENTENCE = "by_sentence",
+  BY_ITEM_IN_LIST = "by_item_in_list",
+  BY_CUSTOM_DELIMITER = "by_custom_delimiter",
 }
 
 export {

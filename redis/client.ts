@@ -10,13 +10,16 @@ import { Chunk } from "../types";
 const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
 
+// small model is 1536, large model is 3072
+const DIM = 3072;
+
 const GenericIndex: RediSearchSchema = {
   "$.chunkEmbeddings": {
     type: SchemaFieldTypes.VECTOR,
     TYPE: "FLOAT32",
     ALGORITHM: VectorAlgorithms.FLAT,
     DIM: 3072, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small
-    DISTANCE_METRIC: "COSINE",
+    DISTANCE_METRIC: "L2",
     AS: "chunkEmbeddings",
   },
   "$.chunkId": {
@@ -37,7 +40,7 @@ class RedisVectorStore {
 
   async createIndex() {
     try {
-      await this.client.ft.dropIndex(INDEX_KEY);
+      await this.client.ft.dropIndex(INDEX_KEY).catch(() => {});
     } catch (indexErr) {
       console.error(indexErr);
     }
@@ -56,6 +59,23 @@ class RedisVectorStore {
         chunkEmbeddings: embedding.embedding,
       }
     );
+  }
+
+  async storeEmbeddings(embeddings: { chunkId: string; embedding: number[] }[]) {
+    await Promise.all(embeddings.map((embedding) => this.addEmbedding(embedding)));
+  }
+
+  async queryEmbeddings(query: number[], k: number = 3) {
+
+    const results = await this.knnSearchEmbeddings({
+      inputVector: query,
+      k,
+    });
+
+    return results.documents.map((doc) => ({
+      chunkId: doc.value.chunkId as string,
+      score: doc.value.score as number,
+    }));
   }
 
   async knnSearchEmbeddings({
