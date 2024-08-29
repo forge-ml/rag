@@ -11,14 +11,19 @@ const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
 
 // small model is 1536, large model is 3072
-const DIM = 3072;
+enum DIM {
+  OPENAI_SMALL = 1536,
+  OPENAI_LARGE = 3072,
+  NOMIC_V1_5 = 768,
+}
 
+//@TODO pass in the user's embedding model and adjust the DIM accordingly
 const GenericIndex: RediSearchSchema = {
   "$.chunkEmbeddings": {
     type: SchemaFieldTypes.VECTOR,
     TYPE: "FLOAT32",
     ALGORITHM: VectorAlgorithms.FLAT,
-    DIM: 3072, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small
+    DIM: DIM.NOMIC_V1_5, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small, 768 for nomic v1.5 embedder
     DISTANCE_METRIC: "L2",
     AS: "chunkEmbeddings",
   },
@@ -61,12 +66,15 @@ class RedisVectorStore {
     );
   }
 
-  async storeEmbeddings(embeddings: { chunkId: string; embedding: number[] }[]) {
-    await Promise.all(embeddings.map((embedding) => this.addEmbedding(embedding)));
+  async storeEmbeddings(
+    embeddings: { chunkId: string; embedding: number[] }[]
+  ) {
+    await Promise.all(
+      embeddings.map((embedding) => this.addEmbedding(embedding))
+    );
   }
 
   async queryEmbeddings(query: number[], k: number = 3) {
-
     const results = await this.knnSearchEmbeddings({
       inputVector: query,
       k,

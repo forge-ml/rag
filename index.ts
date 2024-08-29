@@ -1,6 +1,8 @@
 import OpenAI from "./node_modules/openai/index";
 import RedisVectorStore from "./redis/client";
-import OpenAIEmbedder from "./simple/embedder";
+import OpenAIEmbedder from "./embedders/openaiEmbedder";
+import NomicEmbedder from "./embedders/nomicEmbedder";
+import { cleanText } from "./utils/preprocess";
 import chunkText from "./simple/split";
 import {
   ChunkingStrategy,
@@ -18,13 +20,14 @@ import {
 // We need to be able to query embeddings
 // We need to be able to get relevant chunks
 
-type InitializeDocumentOptions = {
-  strategy: Exclude<ChunkingStrategy, ChunkingStrategy.BY_CUSTOM_DELIMITER>;
-} | {
-  strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER;
-  delimiter: string;
-};
-
+type InitializeDocumentOptions =
+  | {
+      strategy: Exclude<ChunkingStrategy, ChunkingStrategy.BY_CUSTOM_DELIMITER>;
+    }
+  | {
+      strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER;
+      delimiter: string;
+    };
 
 const createRagger = (embedder: Embedder, vectorStore: VectorStore) => {
   return {
@@ -34,7 +37,10 @@ const createRagger = (embedder: Embedder, vectorStore: VectorStore) => {
       const queryVector = await embedder.generateEmbedding(query);
       return vectorStore.queryEmbeddings(queryVector);
     },
-    initializeDocument: async (text: string, options?: InitializeDocumentOptions) => {
+    initializeDocument: async (
+      text: string,
+      options?: InitializeDocumentOptions
+    ) => {
       // chunk the document
       const chunks = chunkText(text, {
         strategy: options?.strategy || ChunkingStrategy.BY_SENTENCE,
@@ -57,11 +63,13 @@ const createRagger = (embedder: Embedder, vectorStore: VectorStore) => {
 // the documents are chunked
 
 const zendeskData = require("./zendeskData.json");
+const supportDocs = require("./supportDocs.json");
 // upload the document
 // extract the text
-const text = JSON.stringify(zendeskData).replace(/\\n/g, " ");
+const text = cleanText(JSON.stringify(zendeskData).replace(/\\n/g, " "));
+const _text = cleanText(JSON.stringify(supportDocs));
 
-const _text = `
+const __text = `
 Artificial Intelligence: An Overview
 
 Artificial Intelligence (AI) is a rapidly evolving field of computer science focused on creating intelligent machines that can perform tasks typically requiring human intelligence. These tasks include visual perception, speech recognition, decision-making, and language translation.
@@ -121,41 +129,22 @@ if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set");
 }
 
-// Initialize clients
-
-// const vectorStore = createRedisVectorStore("redis://localhost:6379");
-// const ragger = createRagger(embedder, vectorStore);
-
-// ragger.initializeDocument(text);
-
-// // we query the vector store
-// ragger.query("What is the meaning of life?");
-
-// process.exit(0);
-
-// const embeddings = [
-//   {
-//     chunkId: "1",
-//     embedding: [1, 2, 3],
-//   },
-//   {
-//     chunkId: "2",
-//     embedding: [4, 5, 6],
-//   },
-//   {
-//     chunkId: "3",
-//     embedding: [7, 8, 9],
-//   },
-// ];
-
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not set");
 }
 
+// const embedder = new OpenAIEmbedder({
+//   type: "openai",
+//   apiKey: process.env.OPENAI_API_KEY,
+// });
 
-const embedder = new OpenAIEmbedder({
-  type: "openai",
-  apiKey: process.env.OPENAI_API_KEY,
+if (!process.env.ATLAS_API_KEY) {
+  throw new Error("ATLAS_API_KEY is not set");
+}
+
+const embedder = new NomicEmbedder({
+  type: "nomic",
+  apiKey: process.env.ATLAS_API_KEY,
 });
 
 const vectorStore = new RedisVectorStore(process.env.REDIS_URL);
@@ -168,9 +157,11 @@ vectorStore.createIndex();
 
 const chunks = await ragger.initializeDocument(text, {
   strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER,
-  delimiter: "plainBodies"
+  delimiter: "plainBodies",
 });
-const results = await ragger.query("How can I get free stuff from Rotabull?");
+const query = "What does Boris need?";
+const _results = await ragger.query(query);
+const results = await ragger.query("How long do payouts take?");
 
 const relevantChunks = results.map((result) => {
   return {
@@ -179,6 +170,12 @@ const relevantChunks = results.map((result) => {
   };
 });
 
+if (relevantChunks.length === 0) {
+  console.log("No relevant chunks found");
+  console.log("Did you forget to change dimensions");
+}
+
+console.log("Query: ", query);
 
 console.log("Relevant chunks:");
 relevantChunks.forEach((text, index) => {
