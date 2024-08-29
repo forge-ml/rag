@@ -17,6 +17,7 @@ enum DIM {
   NOMIC_V1_5 = 768,
 }
 
+//@TODO pass in the user's embedding model and adjust the DIM accordingly
 const GenericIndex: RediSearchSchema = {
   "$.chunkEmbeddings": {
     type: SchemaFieldTypes.VECTOR,

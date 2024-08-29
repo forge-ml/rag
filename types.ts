@@ -43,6 +43,11 @@ interface Embedder {
   embedChunks: (chunks: Chunk[]) => Promise<Embedding[]>;
 }
 
+type EmbedderOptions = {
+  type: "openai" | "nomic";
+  apiKey: string;
+};
+
 enum ChunkingStrategy {
   BY_PARAGRAPH = "by_paragraph",
   BY_SENTENCE = "by_sentence",
@@ -51,11 +56,12 @@ enum ChunkingStrategy {
 }
 
 export {
-    Chunk,
-    ChunkingStrategy,
-    Document,
-    Embedding,
-    ScoredEmbedding,
-    VectorStore,
-    Embedder,
-}
+  Chunk,
+  ChunkingStrategy,
+  Document,
+  Embedding,
+  ScoredEmbedding,
+  VectorStore,
+  Embedder,
+  EmbedderOptions,
+};

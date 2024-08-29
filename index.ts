@@ -1,6 +1,7 @@
 import OpenAI from "./node_modules/openai/index";
 import RedisVectorStore from "./redis/client";
-import { OpenAIEmbedder, NomicEmbedder } from "./simple/embedder";
+import OpenAIEmbedder from "./embedders/openaiEmbedder";
+import NomicEmbedder from "./embedders/nomicEmbedder";
 import { cleanText } from "./utils/preprocess";
 import chunkText from "./simple/split";
 import {
@@ -128,33 +129,6 @@ if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set");
 }
 
-// Initialize clients
-
-// const vectorStore = createRedisVectorStore("redis://localhost:6379");
-// const ragger = createRagger(embedder, vectorStore);
-
-// ragger.initializeDocument(text);
-
-// // we query the vector store
-// ragger.query("What is the meaning of life?");
-
-// process.exit(0);
-
-// const embeddings = [
-//   {
-//     chunkId: "1",
-//     embedding: [1, 2, 3],
-//   },
-//   {
-//     chunkId: "2",
-//     embedding: [4, 5, 6],
-//   },
-//   {
-//     chunkId: "3",
-//     embedding: [7, 8, 9],
-//   },
-// ];
-
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not set");
 }
@@ -185,9 +159,9 @@ const chunks = await ragger.initializeDocument(text, {
   strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER,
   delimiter: "plainBodies",
 });
-
-const results = await ragger.query("What does Boris need?");
-const _results = await ragger.query("How long do payouts take?");
+const query = "What does Boris need?";
+const _results = await ragger.query(query);
+const results = await ragger.query("How long do payouts take?");
 
 const relevantChunks = results.map((result) => {
   return {
@@ -195,6 +169,13 @@ const relevantChunks = results.map((result) => {
     text: chunks.find((c) => c.id === result.chunkId)?.text,
   };
 });
+
+if (relevantChunks.length === 0) {
+  console.log("No relevant chunks found");
+  console.log("Did you forget to change dimensions");
+}
+
+console.log("Query: ", query);
 
 console.log("Relevant chunks:");
 relevantChunks.forEach((text, index) => {
