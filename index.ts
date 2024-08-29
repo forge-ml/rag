@@ -97,7 +97,13 @@ const embedder = new NomicEmbedder({
 const query = "What is Zorbulian cuisine?";
 
 //initialize the doc store
-const docStore = new MinioDocStore();
+const docStore = new MinioDocStore(
+  "localhost",
+  9000,
+  false,
+  "minioadmin",
+  "minioadmin"
+);
 
 // initialize the vector store
 const vectorStore = new RedisVectorStore(process.env.REDIS_URL);

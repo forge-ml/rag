@@ -18,13 +18,19 @@ class MinioDocStore implements DocStore {
   chunksFolder = "chunks";
   chunksPath = `${this.chunksFolder}/${this.chunksName}`;
 
-  constructor() {
+  constructor(
+    endpoint: string,
+    port: number,
+    useSSL: boolean,
+    accessKey: string,
+    secretKey: string
+  ) {
     this.client = new Client({
-      endPoint: "localhost",
-      port: 9000,
-      useSSL: false,
-      accessKey: "minioadmin",
-      secretKey: "minioadmin",
+      endPoint: endpoint,
+      port: port,
+      useSSL: useSSL,
+      accessKey: accessKey,
+      secretKey: secretKey,
     });
     this.initializeBucket();
   }
