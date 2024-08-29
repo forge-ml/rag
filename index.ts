@@ -1,62 +1,10 @@
-import OpenAI from "./node_modules/openai/index";
-import RedisVectorStore from "./redis/client";
-import OpenAIEmbedder from "./embedders/openaiEmbedder";
+import RedisVectorStore from "./stores/vectorStore/redis/index";
 import NomicEmbedder from "./embedders/nomicEmbedder";
 import { cleanText } from "./utils/preprocess";
-import chunkText from "./simple/split";
-import {
-  ChunkingStrategy,
-  Embedding,
-  ScoredEmbedding,
-  VectorStore,
-  Embedder,
-} from "./types";
-
-// We want to be able to do RAG
-// -- We need to be able to handle document loading / storage
-// We need to be able to chunk documents
-// We need to be able to embed chunks
-// We need to be able to store embeddings
-// We need to be able to query embeddings
-// We need to be able to get relevant chunks
-
-type InitializeDocumentOptions =
-  | {
-      strategy: Exclude<ChunkingStrategy, ChunkingStrategy.BY_CUSTOM_DELIMITER>;
-    }
-  | {
-      strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER;
-      delimiter: string;
-    };
-
-const createRagger = (embedder: Embedder, vectorStore: VectorStore) => {
-  return {
-    embedder,
-    vectorStore,
-    query: async (query: string) => {
-      const queryVector = await embedder.generateEmbedding(query);
-      return vectorStore.queryEmbeddings(queryVector);
-    },
-    initializeDocument: async (
-      text: string,
-      options?: InitializeDocumentOptions
-    ) => {
-      // chunk the document
-      const chunks = chunkText(text, {
-        strategy: options?.strategy || ChunkingStrategy.BY_SENTENCE,
-        delimiter: options?.delimiter,
-      });
-
-      // embed the chunks
-      const embeddings = await embedder.embedChunks(chunks);
-
-      // store the embeddings in a vector store
-      await vectorStore.storeEmbeddings(embeddings);
-
-      return chunks;
-    },
-  };
-};
+import { ChunkingStrategy, ScoredEmbedding, Chunk, StoresClass } from "./types";
+import Stores from "./stores/store";
+import createRagger from "./simple/ragger";
+import MinioDocStore from "./stores/docStore/minio";
 
 // we have a pdf, we upload the pdf
 // the PDF is split into pages and uploaded as documents
@@ -66,10 +14,10 @@ const zendeskData = require("./zendeskData.json");
 const supportDocs = require("./supportDocs.json");
 // upload the document
 // extract the text
-const text = cleanText(JSON.stringify(zendeskData).replace(/\\n/g, " "));
+const __text = cleanText(JSON.stringify(zendeskData).replace(/\\n/g, " "));
 const _text = cleanText(JSON.stringify(supportDocs));
 
-const __text = `
+const text = `
 Artificial Intelligence: An Overview
 
 Artificial Intelligence (AI) is a rapidly evolving field of computer science focused on creating intelligent machines that can perform tasks typically requiring human intelligence. These tasks include visual perception, speech recognition, decision-making, and language translation.
@@ -125,13 +73,13 @@ Zorbulonian pets are often extradimensional beings that phase in and out of visi
 
 `;
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY is not set");
-}
-
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not set");
 }
+
+// if (!process.env.OPENAI_API_KEY) {
+//   throw new Error("OPENAI_API_KEY is not set");
+// }
 
 // const embedder = new OpenAIEmbedder({
 //   type: "openai",
@@ -146,42 +94,30 @@ const embedder = new NomicEmbedder({
   type: "nomic",
   apiKey: process.env.ATLAS_API_KEY,
 });
+const query = "What is Zorbulian cuisine?";
 
+//initialize the doc store
+const docStore = new MinioDocStore();
+
+// initialize the vector store
 const vectorStore = new RedisVectorStore(process.env.REDIS_URL);
-
-const ragger = createRagger(embedder, vectorStore);
 
 // initialize the vector store
 vectorStore.client.flushDb();
 vectorStore.createIndex();
 
-const chunks = await ragger.initializeDocument(text, {
-  strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER,
-  delimiter: "plainBodies",
-});
-const query = "What does Boris need?";
-const _results = await ragger.query(query);
-const results = await ragger.query("How long do payouts take?");
-
-const relevantChunks = results.map((result) => {
-  return {
-    ...result,
-    text: chunks.find((c) => c.id === result.chunkId)?.text,
-  };
+const stores = new Stores({
+  vectorStore,
+  docStore,
 });
 
-if (relevantChunks.length === 0) {
-  console.log("No relevant chunks found");
-  console.log("Did you forget to change dimensions");
-}
+const ragger = createRagger(embedder, stores);
 
-console.log("Query: ", query);
-
-console.log("Relevant chunks:");
-relevantChunks.forEach((text, index) => {
-  console.log(`Chunk ${index + 1}:`);
-  console.log(JSON.stringify(text, null, 2));
-  console.log("---");
+const chunks: Chunk[] = await ragger.initializeDocument(text, {
+  strategy: ChunkingStrategy.BY_SENTENCE,
 });
+
+const relevantChunks = await ragger.query(query, 5);
+console.log("relevantChunks", relevantChunks);
 
 vectorStore.client.disconnect();

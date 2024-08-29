@@ -5,7 +5,7 @@ import {
   SchemaFieldTypes,
   VectorAlgorithms,
 } from "redis";
-import { Chunk } from "../types";
+import { VectorStore } from "../../../types";
 
 const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
@@ -35,7 +35,7 @@ const GenericIndex: RediSearchSchema = {
   },
 };
 
-class RedisVectorStore {
+class RedisVectorStore implements VectorStore {
   client: RedisClientType;
 
   constructor(url: string) {
@@ -74,7 +74,7 @@ class RedisVectorStore {
     );
   }
 
-  async queryEmbeddings(query: number[], k: number = 3) {
+  async queryEmbeddings(query: number[], k: number) {
     const results = await this.knnSearchEmbeddings({
       inputVector: query,
       k,
