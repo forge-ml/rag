@@ -101,11 +101,10 @@ const docStore = new MinioDocStore();
 
 // initialize the vector store
 const vectorStore = new RedisVectorStore(process.env.REDIS_URL);
-
-// initialize the vector store
 vectorStore.client.flushDb();
 vectorStore.createIndex();
 
+//setup Store
 const stores = new Stores({
   vectorStore,
   docStore,

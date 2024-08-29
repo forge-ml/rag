@@ -48,7 +48,6 @@ interface VectorStore {
 /**
  * What do we need from a doc store
  * CRUD on documents
- * this means we store names/ids and be able to provide those to the user?
  *
  * Store each documents chunks?
  *
