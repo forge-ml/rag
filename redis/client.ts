@@ -18,7 +18,7 @@ const GenericIndex: RediSearchSchema = {
     type: SchemaFieldTypes.VECTOR,
     TYPE: "FLOAT32",
     ALGORITHM: VectorAlgorithms.FLAT,
-    DIM: 3072, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small
+    DIM: 768, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small, 768 for nomic v1.5 embedder
     DISTANCE_METRIC: "L2",
     AS: "chunkEmbeddings",
   },
@@ -61,12 +61,15 @@ class RedisVectorStore {
     );
   }
 
-  async storeEmbeddings(embeddings: { chunkId: string; embedding: number[] }[]) {
-    await Promise.all(embeddings.map((embedding) => this.addEmbedding(embedding)));
+  async storeEmbeddings(
+    embeddings: { chunkId: string; embedding: number[] }[]
+  ) {
+    await Promise.all(
+      embeddings.map((embedding) => this.addEmbedding(embedding))
+    );
   }
 
   async queryEmbeddings(query: number[], k: number = 3) {
-
     const results = await this.knnSearchEmbeddings({
       inputVector: query,
       k,

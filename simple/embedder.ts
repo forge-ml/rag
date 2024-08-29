@@ -2,11 +2,44 @@ import OpenAI from "openai";
 import { Chunk, Embedder, Embedding } from "../types";
 import { estimateTokens, estimateTokensByLength } from "../utils/tokenEstimate";
 import { Semaphore, Throttler } from "../utils/semaphore";
+import { embed } from "@nomic-ai/atlas";
 
 type EmbedderOptions = {
-  type: "openai";
+  type: "openai" | "nomic";
   apiKey: string;
 };
+
+class NomicEmbedder implements Embedder {
+  private apiKey: string;
+  //@TODO set api key with AtlasUser and make api calls instead
+
+  constructor({ apiKey }: EmbedderOptions) {
+    this.apiKey = apiKey;
+  }
+
+  async generateEmbedding(text: string): Promise<number[]> {
+    const embedding = await embed(
+      text,
+      { model: "nomic-embed-text-v1.5" },
+      this.apiKey
+    );
+    return embedding;
+  }
+
+  async embedChunks(chunks: Chunk[]): Promise<Embedding[]> {
+    const embeddings = await embed(
+      chunks.map((chunk) => chunk.text),
+      { model: "nomic-embed-text-v1.5" },
+      this.apiKey
+    );
+
+    const embeddedChunks = chunks.map((chunk, index) => ({
+      chunkId: chunk.forgeMetadata.chunkId,
+      embedding: embeddings[index],
+    }));
+    return embeddedChunks;
+  }
+}
 
 class OpenAIEmbedder implements Embedder {
   private openai: OpenAI;
@@ -73,7 +106,11 @@ class OpenAIEmbedder implements Embedder {
       { chunks: [] as Chunk[], totalLength: 0 }
     );
 
-    console.log("Truncated chunks:", truncatedChunks.length, truncatedChunks[0].text.length);
+    console.log(
+      "Truncated chunks:",
+      truncatedChunks.length,
+      truncatedChunks[0].text.length
+    );
 
     // Generate embeddings for the truncated chunks
     const embeddings = await this.generateEmbeddingBatch(
@@ -86,8 +123,7 @@ class OpenAIEmbedder implements Embedder {
       chunkId: chunk.forgeMetadata.chunkId,
       embedding: embeddings[index],
     }));
-
   }
 }
 
-export default OpenAIEmbedder;
+export { OpenAIEmbedder, NomicEmbedder };
