@@ -8,10 +8,9 @@ interface ChunkMetadata {
   chunkId: string;
 }
 
-interface Document {
-  forgeMetadata: Metadata; // rename built in metadata
-  metadata: Record<string, any>; // user specified metadata
-  text: string;
+interface DocumentClass {
+  getMetadata: () => Metadata;
+  getText: () => string;
 }
 
 interface Chunk {
@@ -60,18 +59,19 @@ interface VectorStore {
  */
 
 type DocStore = {
-  storeDocument: (text: string) => Promise<void>;
-  retrieveDocument: () => Promise<string>;
-  updateDocument: (text: string) => Promise<void>;
-  deleteDocument: () => Promise<void>;
+  storeDocument: (document: DocumentClass) => Promise<void>;
+  retrieveDocumentText: (document: DocumentClass) => Promise<string>;
+  updateDocument: (text: string, document: DocumentClass) => Promise<void>;
+  deleteDocument: (document: DocumentClass) => Promise<void>;
 
-  storeChunks: (chunks: Chunk[]) => Promise<void>;
-  retrieveChunks: () => Promise<Chunk[]>;
-  updateChunks: (chunks: Chunk[]) => Promise<void>;
-  deleteChunks: () => Promise<void>;
+  storeChunks: (chunks: Chunk[], document: DocumentClass) => Promise<void>;
+  retrieveChunks: (document: DocumentClass) => Promise<Chunk[]>;
+  updateChunks: (chunks: Chunk[], document: DocumentClass) => Promise<void>;
+  deleteChunks: (document: DocumentClass) => Promise<void>;
 
   queryFromEmbeddings: (
-    embeddings: ScoredEmbedding[]
+    embeddings: ScoredEmbedding[],
+    document: DocumentClass
   ) => Promise<RelevantChunk[]>; // given a query embedding, return the chunks that are most relevant
 };
 
@@ -109,7 +109,7 @@ type InitializeDocumentOptions =
 export {
   Chunk,
   ChunkingStrategy,
-  Document,
+  DocumentClass,
   Embedding,
   ScoredEmbedding,
   VectorStore,
@@ -119,4 +119,5 @@ export {
   StoresClass,
   DocStore,
   RelevantChunk,
+  Metadata,
 };

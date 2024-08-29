@@ -5,7 +5,7 @@ import { ChunkingStrategy, ScoredEmbedding, Chunk, StoresClass } from "./types";
 import Stores from "./stores/store";
 import createRagger from "./simple/ragger";
 import MinioDocStore from "./stores/docStore/minio";
-
+import Document from "./documents/documents";
 // we have a pdf, we upload the pdf
 // the PDF is split into pages and uploaded as documents
 // the documents are chunked
@@ -73,6 +73,10 @@ Zorbulonian pets are often extradimensional beings that phase in and out of visi
 
 `;
 
+const document = new Document(text, {
+  title: "Zorbulonian Intergalactic Confederation",
+});
+
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not set");
 }
@@ -116,13 +120,15 @@ const stores = new Stores({
   docStore,
 });
 
+//@TEST:  Upload multiple files and test
+
 const ragger = createRagger(embedder, stores);
 
-const chunks: Chunk[] = await ragger.initializeDocument(text, {
+const chunks: Chunk[] = await ragger.initializeDocument(document, {
   strategy: ChunkingStrategy.BY_SENTENCE,
 });
 
-const relevantChunks = await ragger.query(query, 5);
+const relevantChunks = await ragger.query(query, document, 5);
 console.log("relevantChunks", relevantChunks);
 
 vectorStore.client.disconnect();

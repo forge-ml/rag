@@ -6,6 +6,7 @@ import {
   ScoredEmbedding,
   Chunk,
   Embedding,
+  DocumentClass,
 } from "../types";
 import chunkText from "./split";
 import { StoresClass } from "../types";
@@ -19,21 +20,24 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
     embedder,
     vectorStore,
     docStore,
-    query: async (query: string, k: number = 3) => {
+    query: async (query: string, document: DocumentClass, k: number = 3) => {
       const queryVector = await embedder.generateEmbedding(query);
       const embeddings = await vectorStore.queryEmbeddings(queryVector, k);
 
       // Get the chunks
-      const relevantChunks = await docStore.queryFromEmbeddings(embeddings);
+      const relevantChunks = await docStore.queryFromEmbeddings(
+        embeddings,
+        document
+      );
 
       return relevantChunks;
     },
     initializeDocument: async (
-      text: string,
+      document: DocumentClass,
       options?: InitializeDocumentOptions
     ) => {
       // chunk the document
-      const chunks: Chunk[] = chunkText(text, {
+      const chunks: Chunk[] = chunkText(document, {
         strategy: options?.strategy || ChunkingStrategy.BY_SENTENCE,
         delimiter: options?.delimiter,
       });
@@ -43,8 +47,10 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
 
       // store the embeddings in a vector store
       const embeddingPromise = vectorStore.storeEmbeddings(embeddings);
-      const docStorePromise = docStore.storeDocument(text);
-      const docStoreChunkPromise = docStore.storeChunks(chunks);
+
+      //@QUESTION: in minio should documents and chunks be in the same folder or have there own folder
+      const docStorePromise = docStore.storeDocument(document);
+      const docStoreChunkPromise = docStore.storeChunks(chunks, document);
 
       await Promise.all([
         embeddingPromise,
