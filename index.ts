@@ -136,6 +136,11 @@ const chunks: Chunk[] = await ragger.initializeDocument(document, {
   strategy: ChunkingStrategy.BY_SENTENCE,
 });
 
+// const testDocument = await docStore.retrieveDocument(
+//   document.getForgeMetadata().documentId
+// );
+// console.log("testDocument", testDocument);
+
 const supportDocsChunks: Chunk[] = await ragger.initializeDocument(
   supportDocument,
   {
@@ -149,8 +154,6 @@ const zendeskDataChunks: Chunk[] = await ragger.initializeDocument(
     strategy: ChunkingStrategy.BY_SENTENCE,
   }
 );
-
-//@TODO: IMPORTANT metadata needs to be stored somewhere, rn its being stored in memory?
 
 const query = "What is Zorbulian cuisine?";
 const querySupportDocs = "How does Rotabull sync your parts data from Quantum?";

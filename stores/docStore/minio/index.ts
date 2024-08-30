@@ -13,11 +13,9 @@ class MinioDocStore implements DocStore {
   //@TODO: These should not be hardcoded or class properties - this is only because we are starting with one document for now - fix
   bucketName = "doc-store"; //@TODO make this constructor parameter
   documentName = "doc";
-  private static readonly DOCUMENT_FOLDER = "documents";
-  documentPath = `${MinioDocStore.DOCUMENT_FOLDER}/${this.documentName}`;
+  private static readonly DOCUMENT_FILE = "documents";
   chunksName = "chunks";
-  private static readonly CHUNKS_FOLDER = "chunks";
-  chunksPath = `${MinioDocStore.CHUNKS_FOLDER}/${this.chunksName}`;
+  private static readonly CHUNKS_FILE = "chunks";
 
   constructor(
     endpoint: string,
@@ -48,14 +46,17 @@ class MinioDocStore implements DocStore {
 
   async storeDocument(document: DocumentClass): Promise<void> {
     const docPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.DOCUMENT_FOLDER
+      MinioDocStore.DOCUMENT_FILE
     }`;
+
+    //converting document to a string
+    const documentString = JSON.stringify(document);
 
     try {
       await this.client.putObject(
         this.bucketName,
         docPath,
-        Buffer.from(document.getText())
+        Buffer.from(documentString)
       );
       //console.log(`Document stored with Name: ${this.documentName}`);
       return;
@@ -65,14 +66,14 @@ class MinioDocStore implements DocStore {
     }
   }
 
-  async retrieveDocumentText(document: DocumentClass): Promise<string> {
-    const docPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.DOCUMENT_FOLDER
-    }`;
+  async retrieveDocument(documentId: string): Promise<DocumentClass> {
+    const docPath = `${documentId}/${MinioDocStore.DOCUMENT_FILE}`;
 
     try {
       const document = await this.client.getObject(this.bucketName, docPath);
-      return document.toString();
+      const documentString = await this.streamToString(document);
+      const documentObject: DocumentClass = JSON.parse(documentString);
+      return documentObject;
     } catch (error) {
       console.error("Error retrieving document:", error);
       throw error;
@@ -82,7 +83,7 @@ class MinioDocStore implements DocStore {
   async updateDocument(text: string, document: DocumentClass): Promise<void> {
     //@TODO: test
     const docPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.DOCUMENT_FOLDER
+      MinioDocStore.DOCUMENT_FILE
     }`;
 
     try {
@@ -95,7 +96,7 @@ class MinioDocStore implements DocStore {
 
   async deleteDocument(document: DocumentClass): Promise<void> {
     const docPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.DOCUMENT_FOLDER
+      MinioDocStore.DOCUMENT_FILE
     }`;
 
     try {
@@ -118,7 +119,7 @@ class MinioDocStore implements DocStore {
   //Chunks methods
   async storeChunks(chunks: Chunk[], document: DocumentClass): Promise<void> {
     const chunksPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.CHUNKS_FOLDER
+      MinioDocStore.CHUNKS_FILE
     }`;
 
     try {
@@ -137,7 +138,7 @@ class MinioDocStore implements DocStore {
   //@QUESTION: should we pass in the document or just use the document id?
   async retrieveChunks(document: DocumentClass): Promise<Chunk[]> {
     const chunksPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.CHUNKS_FOLDER
+      MinioDocStore.CHUNKS_FILE
     }`;
 
     const bucketExists = await this.client.bucketExists(this.bucketName);

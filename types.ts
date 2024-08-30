@@ -62,7 +62,7 @@ interface VectorStore {
 
 type DocStore = {
   storeDocument: (document: DocumentClass) => Promise<void>;
-  retrieveDocumentText: (document: DocumentClass) => Promise<string>;
+  retrieveDocument: (documentId: string) => Promise<DocumentClass>;
   updateDocument: (text: string, document: DocumentClass) => Promise<void>;
   deleteDocument: (document: DocumentClass) => Promise<void>;
 

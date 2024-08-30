@@ -44,8 +44,6 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
         delimiter: options?.delimiter,
       });
 
-      //@TODO IMPORTANT store document metadata
-
       // embed the chunks
       const embeddings: Embedding[] = await embedder.embedChunks(
         chunks,
