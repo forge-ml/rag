@@ -107,15 +107,17 @@ enum ChunkingStrategy {
 type InitializeDocumentOptions =
   | {
       strategy: Exclude<ChunkingStrategy, ChunkingStrategy.BY_CUSTOM_DELIMITER>;
+      delimiter?: undefined;
     }
   | {
       strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER;
       delimiter: string;
     };
 
-export {
+export { ChunkingStrategy  };
+
+export type {
   Chunk,
-  ChunkingStrategy,
   DocumentClass,
   Embedding,
   ScoredEmbedding,

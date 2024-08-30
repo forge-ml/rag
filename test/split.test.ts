@@ -1,7 +1,7 @@
-import chunkText from '../simple/split';
-import { ChunkingStrategy } from '../types';
+import chunkText from '../src/simple/split';
+import { ChunkingStrategy } from '../src/types';
 import { expect, describe, it} from "vitest"
-
+import Document from '../src/documents/documents';
 describe('chunkText function', () => {
   const sampleDocument = `
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
@@ -14,7 +14,7 @@ Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor cong
   `.trim();
 
   it.skip('should chunk text by paragraph with default options', () => {
-    const chunks = chunkText(sampleDocument);
+    const chunks = chunkText(new Document(sampleDocument));
     expect(chunks).to.be.an('array');
     expect(chunks.length).to.equal(4);
     chunks.forEach(chunk => {
@@ -27,7 +27,7 @@ Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor cong
   });
 
   it.skip('should chunk text by sentence', () => {
-    const chunks = chunkText(sampleDocument, { strategy: ChunkingStrategy.BY_SENTENCE });
+    const chunks = chunkText(new Document(sampleDocument), { strategy: ChunkingStrategy.BY_SENTENCE });
     expect(chunks).to.be.an('array');
     expect(chunks.length).to.be.greaterThan(4);
     chunks.forEach(chunk => {
@@ -37,14 +37,14 @@ Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor cong
 
   it.skip('should respect custom chunk size', () => {
     const chunkSize = 200;
-    const chunks = chunkText(sampleDocument, { chunkSize });
+    const chunks = chunkText(new Document(sampleDocument), { chunkSize });
     chunks.forEach(chunk => {
       expect(chunk.text.length).to.be.at.most(chunkSize);
     });
   });
 
   it('should have overlap between chunks', () => {
-    const chunks = chunkText(sampleDocument, { chunkSize: 300, chunkOverlap: 50 });
+    const chunks = chunkText(new Document(sampleDocument), { chunkSize: 300, chunkOverlap: 50 });
     for (let i = 1; i < chunks.length; i++) {
       const prevChunkEnd = chunks[i - 1].text.slice(-50);
       const currentChunkStart = chunks[i].text.slice(0, 50);

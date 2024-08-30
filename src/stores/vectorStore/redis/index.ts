@@ -6,7 +6,6 @@ import {
   VectorAlgorithms,
 } from "redis";
 import { VectorStore } from "../../../types";
-
 const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
 

@@ -49,7 +49,7 @@ class OpenAIEmbedder implements Embedder {
    */
   async embedChunks(chunks: Chunk[], documentId: string): Promise<Embedding[]> {
     // Truncate chunks to 800,000 tokens (rate limit is 1,000,000 tokens)
-    const { chunks: truncatedChunks, totalLength } = chunks.reduce(
+    const { chunks: truncatedChunks } = chunks.reduce(
       (acc, chunk, index) => {
         const currentChunkLength = acc.totalLength + chunk.text.length;
         if (

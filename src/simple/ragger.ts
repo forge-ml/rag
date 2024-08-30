@@ -1,14 +1,12 @@
 import {
   Embedder,
-  VectorStore,
   InitializeDocumentOptions,
   ChunkingStrategy,
-  ScoredEmbedding,
   Chunk,
   Embedding,
   DocumentClass,
 } from "../types";
-import chunkText from "./split";
+import chunkText from "../simple/split";
 import { StoresClass } from "../types";
 
 //returns ragger object
