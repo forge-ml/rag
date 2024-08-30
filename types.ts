@@ -61,15 +61,17 @@ interface VectorStore {
  */
 
 type DocStore = {
-  storeDocument: (document: DocumentClass) => Promise<void>;
+  storeDocument: (document: DocumentClass, chunks: Chunk[]) => Promise<void>;
   retrieveDocument: (documentId: string) => Promise<DocumentClass>;
-  updateDocument: (text: string, document: DocumentClass) => Promise<void>;
-  deleteDocument: (document: DocumentClass) => Promise<void>;
 
-  storeChunks: (chunks: Chunk[], document: DocumentClass) => Promise<void>;
+  //document id of the document to replace, document to replace it with
+  updateDocument: (
+    document: DocumentClass,
+    documentId: string
+  ) => Promise<void>;
+  deleteDocument: (documentId: string) => Promise<void>;
+
   retrieveChunks: (document: DocumentClass) => Promise<Chunk[]>;
-  updateChunks: (chunks: Chunk[], document: DocumentClass) => Promise<void>;
-  deleteChunks: (document: DocumentClass) => Promise<void>;
 
   queryFromEmbeddings: (
     embeddings: ScoredEmbedding[],

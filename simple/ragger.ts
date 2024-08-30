@@ -54,14 +54,9 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
       const embeddingPromise = vectorStore.storeEmbeddings(embeddings);
 
       //@QUESTION: in minio should documents and chunks be in the same folder or have there own folder in minio
-      const docStorePromise = docStore.storeDocument(document);
-      const docStoreChunkPromise = docStore.storeChunks(chunks, document);
+      const docStorePromise = docStore.storeDocument(document, chunks);
 
-      await Promise.all([
-        embeddingPromise,
-        docStorePromise,
-        docStoreChunkPromise,
-      ]);
+      await Promise.all([embeddingPromise, docStorePromise]);
 
       return chunks;
     },

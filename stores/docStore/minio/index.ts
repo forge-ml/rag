@@ -44,20 +44,28 @@ class MinioDocStore implements DocStore {
     return;
   }
 
-  async storeDocument(document: DocumentClass): Promise<void> {
+  async storeDocument(document: DocumentClass, chunks: Chunk[]): Promise<void> {
     const docPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.DOCUMENT_FILE
     }`;
 
-    //converting document to a string
-    const documentString = JSON.stringify(document);
+    const chunksPath = `${document.getForgeMetadata().documentId}/${
+      MinioDocStore.CHUNKS_FILE
+    }`;
 
     try {
-      await this.client.putObject(
-        this.bucketName,
-        docPath,
-        Buffer.from(documentString)
-      );
+      await Promise.all([
+        this.client.putObject(
+          this.bucketName,
+          docPath,
+          Buffer.from(JSON.stringify(document))
+        ),
+        this.client.putObject(
+          this.bucketName,
+          chunksPath,
+          Buffer.from(JSON.stringify(chunks))
+        ),
+      ]);
       //console.log(`Document stored with Name: ${this.documentName}`);
       return;
     } catch (error) {
@@ -80,24 +88,36 @@ class MinioDocStore implements DocStore {
     }
   }
 
-  async updateDocument(text: string, document: DocumentClass): Promise<void> {
-    //@TODO: test
-    const docPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.DOCUMENT_FILE
-    }`;
-
+  //@TODO: fix - this is broken
+  async updateDocument(
+    document: DocumentClass,
+    documentId: string
+  ): Promise<void> {
+    const docPath = `${documentId}/${MinioDocStore.DOCUMENT_FILE}`;
+    //@TODO fix - this is broken
     try {
-      await this.client.putObject(this.bucketName, docPath, Buffer.from(text));
+      // Check if the document exists before updating
+      const exists = await this.client
+        .statObject(this.bucketName, docPath)
+        .catch(() => false);
+      if (!exists) {
+        throw new Error(`Document with ID ${documentId} does not exist.`);
+      }
+
+      // Proceed with update
+      await this.client.putObject(
+        this.bucketName,
+        docPath,
+        Buffer.from(JSON.stringify(document))
+      );
     } catch (error) {
       console.error("Error updating document:", error);
       throw error;
     }
   }
 
-  async deleteDocument(document: DocumentClass): Promise<void> {
-    const docPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.DOCUMENT_FILE
-    }`;
+  async deleteDocument(documentId: string): Promise<void> {
+    const docPath = `${documentId}/${MinioDocStore.DOCUMENT_FILE}`;
 
     try {
       //check if document exists
@@ -106,31 +126,22 @@ class MinioDocStore implements DocStore {
         this.bucketName,
         docPath
       );
-      if (!documentExists) {
+
+      //check if chunks exist
+      const chunksPath = `${documentId}/${MinioDocStore.CHUNKS_FILE}`;
+      const chunksExists = await this.client.statObject(
+        this.bucketName,
+        chunksPath
+      );
+      if (!documentExists || !chunksExists) {
         throw new Error(`Document "${docPath}" does not exist.`);
       }
-      await this.client.removeObject(this.bucketName, docPath);
+      await Promise.all([
+        this.client.removeObject(this.bucketName, docPath),
+        this.client.removeObject(this.bucketName, chunksPath),
+      ]);
     } catch (error) {
       console.error("Error deleting document:", error);
-      throw error;
-    }
-  }
-
-  //Chunks methods
-  async storeChunks(chunks: Chunk[], document: DocumentClass): Promise<void> {
-    const chunksPath = `${document.getForgeMetadata().documentId}/${
-      MinioDocStore.CHUNKS_FILE
-    }`;
-
-    try {
-      await this.client.putObject(
-        this.bucketName,
-        chunksPath,
-        Buffer.from(JSON.stringify(chunks))
-      );
-      //console.log(`Chunks stored with Name: ${this.chunksName}`);
-    } catch (error) {
-      console.error("Error storing chunks:", error);
       throw error;
     }
   }
@@ -156,16 +167,6 @@ class MinioDocStore implements DocStore {
     }
 
     return chunksObject;
-  }
-
-  async updateChunks(chunks: Chunk[]): Promise<void> {
-    //@TODO: Implement this
-    throw new Error("Not implemented");
-  }
-
-  async deleteChunks(): Promise<void> {
-    //@TODO: Implement this
-    throw new Error("Not implemented");
   }
 
   async queryFromEmbeddings(
