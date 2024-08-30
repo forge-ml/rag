@@ -33,6 +33,12 @@ const GenericIndex: RediSearchSchema = {
     SORTABLE: true,
     AS: "chunkId",
   },
+  "$.documentId": {
+    type: SchemaFieldTypes.TEXT,
+    NOSTEM: true,
+    SORTABLE: true,
+    AS: "documentId",
+  },
 };
 
 class RedisVectorStore implements VectorStore {
@@ -55,19 +61,24 @@ class RedisVectorStore implements VectorStore {
     });
   }
 
-  async addEmbedding(embedding: { chunkId: string; embedding: number[] }) {
+  async addEmbedding(embedding: {
+    chunkId: string;
+    documentId: string;
+    embedding: number[];
+  }) {
     return this.client.json.set(
       `${CHUNK_KEY_PREFIX}:${embedding.chunkId}`,
       "$",
       {
         chunkId: embedding.chunkId,
+        documentId: embedding.documentId,
         chunkEmbeddings: embedding.embedding,
       }
     );
   }
 
   async storeEmbeddings(
-    embeddings: { chunkId: string; embedding: number[] }[]
+    embeddings: { chunkId: string; documentId: string; embedding: number[] }[]
   ) {
     await Promise.all(
       embeddings.map((embedding) => this.addEmbedding(embedding))
@@ -82,6 +93,7 @@ class RedisVectorStore implements VectorStore {
 
     return results.documents.map((doc) => ({
       chunkId: doc.value.chunkId as string,
+      documentId: doc.value.documentId as string,
       score: doc.value.score as number,
     }));
   }
@@ -99,7 +111,7 @@ class RedisVectorStore implements VectorStore {
       PARAMS: {
         searchBlob: Buffer.from(new Float32Array(inputVector).buffer),
       },
-      RETURN: ["score", "chunkId"],
+      RETURN: ["score", "chunkId", "documentId"],
       SORTBY: {
         BY: "score",
         // DIRECTION: "DESC"

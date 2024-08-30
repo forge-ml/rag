@@ -32,7 +32,7 @@ const chunkText = (
   } = options;
 
   const text = document.getText();
-  const documentId = document.getMetadata().documentId;
+  const documentId = document.getForgeMetadata().documentId;
   const chunks: Chunk[] = [];
   const splitText = (() => {
     switch (strategy) {

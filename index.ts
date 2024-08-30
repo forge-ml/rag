@@ -14,8 +14,10 @@ const zendeskData = require("./zendeskData.json");
 const supportDocs = require("./supportDocs.json");
 // upload the document
 // extract the text
-const __text = cleanText(JSON.stringify(zendeskData).replace(/\\n/g, " "));
-const _text = cleanText(JSON.stringify(supportDocs));
+const zendeskDataText = cleanText(
+  JSON.stringify(zendeskData).replace(/\\n/g, " ")
+);
+const supportDocsText = cleanText(JSON.stringify(supportDocs));
 
 const text = `
 Artificial Intelligence: An Overview
@@ -73,10 +75,6 @@ Zorbulonian pets are often extradimensional beings that phase in and out of visi
 
 `;
 
-const document = new Document(text, {
-  title: "Zorbulonian Intergalactic Confederation",
-});
-
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not set");
 }
@@ -98,7 +96,6 @@ const embedder = new NomicEmbedder({
   type: "nomic",
   apiKey: process.env.ATLAS_API_KEY,
 });
-const query = "What is Zorbulian cuisine?";
 
 //initialize the doc store
 const docStore = new MinioDocStore(
@@ -121,6 +118,17 @@ const stores = new Stores({
 });
 
 //@TEST:  Upload multiple files and test
+const document = new Document(text, {
+  title: "Zorbulonian Intergalactic Confederation",
+});
+
+const supportDocument = new Document(supportDocsText, {
+  title: "Support Docs",
+});
+
+const zendeskDataDocument = new Document(zendeskDataText, {
+  title: "Zendesk Data",
+});
 
 const ragger = createRagger(embedder, stores);
 
@@ -128,7 +136,41 @@ const chunks: Chunk[] = await ragger.initializeDocument(document, {
   strategy: ChunkingStrategy.BY_SENTENCE,
 });
 
-const relevantChunks = await ragger.query(query, document, 5);
-console.log("relevantChunks", relevantChunks);
+const supportDocsChunks: Chunk[] = await ragger.initializeDocument(
+  supportDocument,
+  {
+    strategy: ChunkingStrategy.BY_SENTENCE,
+  }
+);
 
+const zendeskDataChunks: Chunk[] = await ragger.initializeDocument(
+  zendeskDataDocument,
+  {
+    strategy: ChunkingStrategy.BY_SENTENCE,
+  }
+);
+
+//@TODO: IMPORTANT metadata needs to be stored somewhere, rn its being stored in memory?
+
+const query = "What is Zorbulian cuisine?";
+const querySupportDocs = "How does Rotabull sync your parts data from Quantum?";
+const queryZendeskData = "What companies are in the block list?";
+const relevantChunks = await ragger.query(query, document, 2);
+const relevantChunks2 = await ragger.query(
+  querySupportDocs,
+  supportDocument,
+  2
+);
+const relevantChunks3 = await ragger.query(
+  queryZendeskData,
+  zendeskDataDocument,
+  2
+);
+
+console.log("text chunks\n");
+console.log("relevantChunks", relevantChunks);
+console.log("support docs\n");
+console.log("relevantChunks2", relevantChunks2);
+console.log("zendesk data\n");
+console.log("relevantChunks3", relevantChunks3);
 vectorStore.client.disconnect();

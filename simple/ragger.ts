@@ -20,6 +20,8 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
     embedder,
     vectorStore,
     docStore,
+    //@QUESTION we only use the  document id does it make sense to pass in the document? If we pass in doc id the call looks like
+    //const relevantChunks = await ragger.query(query, document.getForgeMetadata().documentId, 5);
     query: async (query: string, document: DocumentClass, k: number = 3) => {
       const queryVector = await embedder.generateEmbedding(query);
       const embeddings = await vectorStore.queryEmbeddings(queryVector, k);
@@ -42,13 +44,18 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
         delimiter: options?.delimiter,
       });
 
+      //@TODO IMPORTANT store document metadata
+
       // embed the chunks
-      const embeddings: Embedding[] = await embedder.embedChunks(chunks);
+      const embeddings: Embedding[] = await embedder.embedChunks(
+        chunks,
+        document.getForgeMetadata().documentId
+      );
 
       // store the embeddings in a vector store
       const embeddingPromise = vectorStore.storeEmbeddings(embeddings);
 
-      //@QUESTION: in minio should documents and chunks be in the same folder or have there own folder
+      //@QUESTION: in minio should documents and chunks be in the same folder or have there own folder in minio
       const docStorePromise = docStore.storeDocument(document);
       const docStoreChunkPromise = docStore.storeChunks(chunks, document);
 

@@ -18,7 +18,7 @@ class NomicEmbedder implements Embedder {
     return embedding;
   }
 
-  async embedChunks(chunks: Chunk[]): Promise<Embedding[]> {
+  async embedChunks(chunks: Chunk[], documentId: string): Promise<Embedding[]> {
     const embeddings = await embed(
       chunks.map((chunk) => chunk.text),
       { model: "nomic-embed-text-v1.5" },
@@ -27,6 +27,7 @@ class NomicEmbedder implements Embedder {
 
     const embeddedChunks = chunks.map((chunk, index) => ({
       chunkId: chunk.forgeMetadata.chunkId,
+      documentId: documentId,
       embedding: embeddings[index],
     }));
     return embeddedChunks;

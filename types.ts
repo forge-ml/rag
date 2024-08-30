@@ -9,7 +9,8 @@ interface ChunkMetadata {
 }
 
 interface DocumentClass {
-  getMetadata: () => Metadata;
+  getUserMetadata: () => Record<string, any>;
+  getForgeMetadata: () => Metadata;
   getText: () => string;
 }
 
@@ -23,6 +24,7 @@ interface Chunk {
 interface Embedding {
   chunkId: string;
   embedding: number[];
+  documentId: string;
 }
 
 interface ScoredEmbedding {
@@ -82,7 +84,7 @@ type StoresClass = {
 
 interface Embedder {
   generateEmbedding: (text: string) => Promise<number[]>;
-  embedChunks: (chunks: Chunk[]) => Promise<Embedding[]>;
+  embedChunks: (chunks: Chunk[], documentId: string) => Promise<Embedding[]>;
 }
 
 type EmbedderOptions = {

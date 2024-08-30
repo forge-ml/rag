@@ -47,7 +47,7 @@ class MinioDocStore implements DocStore {
   }
 
   async storeDocument(document: DocumentClass): Promise<void> {
-    const docPath = `${document.getMetadata().documentId}/${
+    const docPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.DOCUMENT_FOLDER
     }`;
 
@@ -66,7 +66,7 @@ class MinioDocStore implements DocStore {
   }
 
   async retrieveDocumentText(document: DocumentClass): Promise<string> {
-    const docPath = `${document.getMetadata().documentId}/${
+    const docPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.DOCUMENT_FOLDER
     }`;
 
@@ -81,7 +81,7 @@ class MinioDocStore implements DocStore {
 
   async updateDocument(text: string, document: DocumentClass): Promise<void> {
     //@TODO: test
-    const docPath = `${document.getMetadata().documentId}/${
+    const docPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.DOCUMENT_FOLDER
     }`;
 
@@ -94,7 +94,7 @@ class MinioDocStore implements DocStore {
   }
 
   async deleteDocument(document: DocumentClass): Promise<void> {
-    const docPath = `${document.getMetadata().documentId}/${
+    const docPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.DOCUMENT_FOLDER
     }`;
 
@@ -117,7 +117,7 @@ class MinioDocStore implements DocStore {
 
   //Chunks methods
   async storeChunks(chunks: Chunk[], document: DocumentClass): Promise<void> {
-    const chunksPath = `${document.getMetadata().documentId}/${
+    const chunksPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.CHUNKS_FOLDER
     }`;
 
@@ -136,7 +136,7 @@ class MinioDocStore implements DocStore {
 
   //@QUESTION: should we pass in the document or just use the document id?
   async retrieveChunks(document: DocumentClass): Promise<Chunk[]> {
-    const chunksPath = `${document.getMetadata().documentId}/${
+    const chunksPath = `${document.getForgeMetadata().documentId}/${
       MinioDocStore.CHUNKS_FOLDER
     }`;
 
