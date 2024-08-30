@@ -15,13 +15,13 @@ This package provides a flexible and efficient implementation of Retrieval-Augme
 ## Installation
 
 ```bash
-npm install forge-rag
+npm install @forge-ml/rag
 ```
 
 ## Quick Start
 
 ```typescript
-import { createRagger, OpenAIEmbedder, RedisVectorStore } from "forge-rag";
+import { createRagger, OpenAIEmbedder, RedisVectorStore } from "@forge-ml/rag";
 
 const embedder = new OpenAIEmbedder({ apiKey: "your-openai-api-key" });
 const vectorStore = new RedisVectorStore("redis://localhost:6379");
