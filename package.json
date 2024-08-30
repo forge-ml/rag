@@ -1,6 +1,6 @@
 {
   "name": "@forge-ml/rag",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A RAG (Retrieval-Augmented Generation) package for Forge ML",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
