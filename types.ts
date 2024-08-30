@@ -62,15 +62,18 @@ interface VectorStore {
 
 type DocStore = {
   storeDocument: (document: DocumentClass, chunks: Chunk[]) => Promise<void>;
+
+  //@TODO: broken - returns json object instead fo Document Class
   retrieveDocument: (documentId: string) => Promise<DocumentClass>;
 
-  //document id of the document to replace, document to replace it with
+  //@TODO: broken - find a way to update the document content without updating the id
   updateDocument: (
     document: DocumentClass,
     documentId: string
   ) => Promise<void>;
   deleteDocument: (documentId: string) => Promise<void>;
 
+  //@TODO: broken - returns json object instead of Chunk[]
   retrieveChunks: (document: DocumentClass) => Promise<Chunk[]>;
 
   queryFromEmbeddings: (
