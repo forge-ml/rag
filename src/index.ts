@@ -1,6 +1,6 @@
 import chunkText from "./simple/split";
 import { cleanText } from "./utils/preprocess";
-
+import Document from "./documents/documents";
 // Embedders
 import OpenAIEmbedder from "./embedders/openaiEmbedder";
 import NomicEmbedder from "./embedders/nomicEmbedder";
@@ -18,6 +18,7 @@ export * from "../src/types";
 
 // Export main functions and classes
 export { chunkText, cleanText };
+export { Document };
 
 // Embedders
 export { OpenAIEmbedder, NomicEmbedder };
@@ -25,6 +26,5 @@ export { OpenAIEmbedder, NomicEmbedder };
 // Stores
 export { Stores };
 export { RedisVectorStore, MinioDocStore };
-
 
 export default createRagger;
