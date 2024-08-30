@@ -1,4 +1,4 @@
-import { Chunk, ChunkingStrategy } from '../types';
+import { Chunk, ChunkingStrategy, DocumentClass } from "../types";
 
 const DEFAULT_CHUNK_SIZE = 1000;
 const DEFAULT_CHUNK_OVERLAP = 200;
@@ -17,7 +17,7 @@ const DEFAULT_CHUNK_OVERLAP = 200;
  * @returns An array of Chunk objects.
  */
 const chunkText = (
-  text: string,
+  document: DocumentClass,
   options: {
     strategy?: ChunkingStrategy;
     delimiter?: string;
@@ -31,8 +31,9 @@ const chunkText = (
     chunkOverlap = DEFAULT_CHUNK_OVERLAP,
   } = options;
 
+  const text = document.getText();
+  const documentId = document.getForgeMetadata().documentId;
   const chunks: Chunk[] = [];
-  let documentId = Date.now().toString(); // Simple unique ID generation
   const splitText = (() => {
     switch (strategy) {
       case ChunkingStrategy.BY_PARAGRAPH:
@@ -42,12 +43,12 @@ const chunkText = (
       case ChunkingStrategy.BY_ITEM_IN_LIST:
         return text.split(/\n\s*[-•*]\s*/);
       case ChunkingStrategy.BY_CUSTOM_DELIMITER:
-        return text.split(options?.delimiter || ',');
+        return text.split(options?.delimiter || ",");
       default:
         return text.split(/\n\s*\n/); // Default to paragraph splitting
     }
   })();
-  let currentChunk = '';
+  let currentChunk = "";
   let chunkId = 0;
 
   for (const segment of splitText) {
@@ -58,9 +59,9 @@ const chunkText = (
         currentChunk = currentChunk.slice(-chunkOverlap);
       }
     }
-    
+
     if (currentChunk.length + segment.length <= chunkSize) {
-      currentChunk += (currentChunk ? ' ' : '') + segment;
+      currentChunk += (currentChunk ? " " : "") + segment;
     } else {
       // If adding the segment would exceed chunkSize, start a new chunk
       if (currentChunk) {
@@ -68,10 +69,12 @@ const chunkText = (
       }
       currentChunk = segment;
     }
-    
+
     // Ensure the last chunk doesn't exceed chunkSize
     while (currentChunk.length > chunkSize) {
-      chunks.push(createChunk(currentChunk.slice(0, chunkSize), documentId, chunkId++));
+      chunks.push(
+        createChunk(currentChunk.slice(0, chunkSize), documentId, chunkId++)
+      );
       currentChunk = currentChunk.slice(chunkSize - chunkOverlap);
     }
   }
@@ -83,7 +86,11 @@ const chunkText = (
   return chunks;
 };
 
-const createChunk = (text: string, documentId: string, chunkId: number): Chunk => ({
+const createChunk = (
+  text: string,
+  documentId: string,
+  chunkId: number
+): Chunk => ({
   id: `${documentId}-${chunkId}`,
   forgeMetadata: {
     documentId,
@@ -94,6 +101,3 @@ const createChunk = (text: string, documentId: string, chunkId: number): Chunk =
 });
 
 export default chunkText;
-
-
-

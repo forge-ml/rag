@@ -47,7 +47,7 @@ class OpenAIEmbedder implements Embedder {
    * @param chunks The chunks to embed.
    * @returns The embeddings for the chunks.
    */
-  async embedChunks(chunks: Chunk[]): Promise<Embedding[]> {
+  async embedChunks(chunks: Chunk[], documentId: string): Promise<Embedding[]> {
     // Truncate chunks to 800,000 tokens (rate limit is 1,000,000 tokens)
     const { chunks: truncatedChunks, totalLength } = chunks.reduce(
       (acc, chunk, index) => {
@@ -73,6 +73,7 @@ class OpenAIEmbedder implements Embedder {
     return truncatedChunks.map((chunk, index) => ({
       chunkId: chunk.forgeMetadata.chunkId,
       embedding: embeddings[index],
+      documentId,
     }));
   }
 }

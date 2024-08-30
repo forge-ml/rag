@@ -5,7 +5,7 @@ import {
   SchemaFieldTypes,
   VectorAlgorithms,
 } from "redis";
-import { Chunk } from "../types";
+import { VectorStore } from "../../../types";
 
 const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
@@ -33,9 +33,15 @@ const GenericIndex: RediSearchSchema = {
     SORTABLE: true,
     AS: "chunkId",
   },
+  "$.documentId": {
+    type: SchemaFieldTypes.TEXT,
+    NOSTEM: true,
+    SORTABLE: true,
+    AS: "documentId",
+  },
 };
 
-class RedisVectorStore {
+class RedisVectorStore implements VectorStore {
   client: RedisClientType;
 
   constructor(url: string) {
@@ -55,26 +61,31 @@ class RedisVectorStore {
     });
   }
 
-  async addEmbedding(embedding: { chunkId: string; embedding: number[] }) {
+  async addEmbedding(embedding: {
+    chunkId: string;
+    documentId: string;
+    embedding: number[];
+  }) {
     return this.client.json.set(
       `${CHUNK_KEY_PREFIX}:${embedding.chunkId}`,
       "$",
       {
         chunkId: embedding.chunkId,
+        documentId: embedding.documentId,
         chunkEmbeddings: embedding.embedding,
       }
     );
   }
 
   async storeEmbeddings(
-    embeddings: { chunkId: string; embedding: number[] }[]
+    embeddings: { chunkId: string; documentId: string; embedding: number[] }[]
   ) {
     await Promise.all(
       embeddings.map((embedding) => this.addEmbedding(embedding))
     );
   }
 
-  async queryEmbeddings(query: number[], k: number = 3) {
+  async queryEmbeddings(query: number[], k: number) {
     const results = await this.knnSearchEmbeddings({
       inputVector: query,
       k,
@@ -82,6 +93,7 @@ class RedisVectorStore {
 
     return results.documents.map((doc) => ({
       chunkId: doc.value.chunkId as string,
+      documentId: doc.value.documentId as string,
       score: doc.value.score as number,
     }));
   }
@@ -99,7 +111,7 @@ class RedisVectorStore {
       PARAMS: {
         searchBlob: Buffer.from(new Float32Array(inputVector).buffer),
       },
-      RETURN: ["score", "chunkId"],
+      RETURN: ["score", "chunkId", "documentId"],
       SORTBY: {
         BY: "score",
         // DIRECTION: "DESC"
