@@ -6,6 +6,11 @@ import {
   RelevantChunk,
   ScoredEmbedding,
 } from "../../../types";
+import Document from "../../../documents/documents";
+
+const mergeDocuments = (existingDocument: Document, newDocument: Document): Document => {
+  return new Document(existingDocument.text + newDocument.text, existingDocument.metadata, existingDocument.forgeMetadata);
+};
 
 class MinioDocStore implements DocStore {
   client: Client;
@@ -74,41 +79,39 @@ class MinioDocStore implements DocStore {
     }
   }
 
-  async retrieveDocument(documentId: string): Promise<DocumentClass> {
+  async retrieveDocument(documentId: string): Promise<Document> {
     const docPath = `${documentId}/${MinioDocStore.DOCUMENT_FILE}`;
 
     try {
       const document = await this.client.getObject(this.bucketName, docPath);
-      const documentString = await this.streamToString(document);
-      const documentObject: DocumentClass = JSON.parse(documentString);
-      return documentObject;
+      const documentString = JSON.parse(await this.streamToString(document));
+      return new Document(documentString.text, documentString.metadata, documentString.forgeMetadata);
     } catch (error) {
       console.error("Error retrieving document:", error);
       throw error;
     }
   }
 
-  //@TODO: fix - this is broken
   async updateDocument(
-    document: DocumentClass,
+    document: Document,
     documentId: string
   ): Promise<void> {
     const docPath = `${documentId}/${MinioDocStore.DOCUMENT_FILE}`;
     //@TODO fix - this is broken
     try {
       // Check if the document exists before updating
-      const exists = await this.client
-        .statObject(this.bucketName, docPath)
-        .catch(() => false);
-      if (!exists) {
+      const existingDocument = await this.retrieveDocument(documentId);
+      if (!existingDocument) {
         throw new Error(`Document with ID ${documentId} does not exist.`);
       }
+
+      const updatedDocument = mergeDocuments(existingDocument, document);
 
       // Proceed with update
       await this.client.putObject(
         this.bucketName,
         docPath,
-        Buffer.from(JSON.stringify(document))
+        Buffer.from(JSON.stringify(updatedDocument))
       );
     } catch (error) {
       console.error("Error updating document:", error);
@@ -147,8 +150,8 @@ class MinioDocStore implements DocStore {
   }
 
   //@QUESTION: should we pass in the document or just use the document id?
-  async retrieveChunks(document: DocumentClass): Promise<Chunk[]> {
-    const chunksPath = `${document.getForgeMetadata().documentId}/${
+  async retrieveChunks(documentId: string): Promise<Chunk[]> {
+    const chunksPath = `${documentId}/${
       MinioDocStore.CHUNKS_FILE
     }`;
 
@@ -171,9 +174,9 @@ class MinioDocStore implements DocStore {
 
   async queryFromEmbeddings(
     embeddings: ScoredEmbedding[],
-    document: DocumentClass
+    documentId: string
   ): Promise<RelevantChunk[]> {
-    const chunks: Chunk[] = await this.retrieveChunks(document);
+    const chunks: Chunk[] = await this.retrieveChunks(documentId);
 
     const relevantChunks = embeddings.map((embedding) => {
       return {

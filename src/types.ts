@@ -1,3 +1,5 @@
+import Document from "./documents/documents";
+
 interface Metadata {
   documentId: string;
   page?: number; // the page number of the document
@@ -68,17 +70,17 @@ type DocStore = {
 
   //@TODO: broken - find a way to update the document content without updating the id
   updateDocument: (
-    document: DocumentClass,
+    document: Document,
     documentId: string
   ) => Promise<void>;
   deleteDocument: (documentId: string) => Promise<void>;
 
   //@TODO: broken - returns json object instead of Chunk[]
-  retrieveChunks: (document: DocumentClass) => Promise<Chunk[]>;
+  retrieveChunks: (documentId: string) => Promise<Chunk[]>;
 
   queryFromEmbeddings: (
     embeddings: ScoredEmbedding[],
-    document: DocumentClass
+    documentId: string
   ) => Promise<RelevantChunk[]>; // given a query embedding, return the chunks that are most relevant
 };
 

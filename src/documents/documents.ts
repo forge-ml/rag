@@ -7,8 +7,8 @@ class Document implements DocumentClass {
   text: string;
 
   //@QUESTION: should the user be given the option to set their own doc id
-  constructor(text: string, metadata?: Record<string, any>) {
-    this.forgeMetadata = {
+  constructor(text: string, metadata?: Record<string, any>, forgeMetadata?: Metadata) {
+    this.forgeMetadata = forgeMetadata || {
       documentId: generateUUID(),
     };
     this.metadata = metadata || {};
