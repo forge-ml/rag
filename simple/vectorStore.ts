@@ -1,8 +1,8 @@
 import { Embedding, VectorStore, ScoredEmbedding } from "../types";
 
-import { createClient, RedisClientType } from 'redis';
+import { createClient, RedisClientType } from "redis";
 
-
+//@TODO: delete this file? doesn't seem necessary since we have vectorStore/redis/index.ts
 
 type VectorStoreQueryOptions = {
   k: number;

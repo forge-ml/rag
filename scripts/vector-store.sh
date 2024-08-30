@@ -8,18 +8,33 @@ check_docker() {
     fi
 }
 
-# Function to spin up the vector store
-spin_up_vector_store() {
-    echo "Spinning up the vector store..."
+# Function to spin up Redis
+spin_up_redis() {
+    echo "Spinning up Redis..."
     docker compose -f docker/redis.yml up -d
     if [ $? -eq 0 ]; then
-        echo "Vector store is now running."
+        echo "Redis is now running."
     else
-        echo "Failed to start the vector store. Please check the Docker logs for more information."
+        echo "Failed to start Redis. Please check the Docker logs for more information."
+        exit 1
+    fi
+}
+
+# Function to spin up MinIO
+spin_up_minio() {
+    echo "Spinning up MinIO..."
+    docker compose -f docker/minio.yml up -d
+    if [ $? -eq 0 ]; then
+        echo "MinIO is now running."
+    else
+        echo "Failed to start MinIO. Please check the Docker logs for more information."
         exit 1
     fi
 }
 
 # Main execution
 check_docker
-spin_up_vector_store
+spin_up_redis
+spin_up_minio
+
+echo "All services are up and running."
