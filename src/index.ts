@@ -14,7 +14,7 @@ import MinioDocStore from "./stores/docStore/minio/index";
 import createRagger from "./simple/ragger";
 
 // Re-export types
-export * from "../src/types";
+export * from "./types";
 
 // Export main functions and classes
 export { chunkText, cleanText };
