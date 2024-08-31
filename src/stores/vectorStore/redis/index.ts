@@ -84,10 +84,15 @@ class RedisVectorStore implements VectorStore {
     );
   }
 
-  async queryEmbeddings(query: number[], k: number) {
+  async queryEmbeddings(params: {
+    query: number[];
+    k: number;
+    documentIds?: string[];
+  }) {
     const results = await this.knnSearchEmbeddings({
-      inputVector: query,
-      k,
+      inputVector: params.query,
+      k: params.k,
+      documentIds: params.documentIds,
     });
 
     return results.documents.map((doc) => ({
@@ -100,23 +105,38 @@ class RedisVectorStore implements VectorStore {
   async knnSearchEmbeddings({
     inputVector,
     k,
+    documentIds,
   }: {
     inputVector: number[];
     k: number;
+    documentIds?: string[];
   }) {
-    //console.log(inputVector);
-    const query = `*=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
-    return this.client.ft.search(INDEX_KEY, query, {
-      PARAMS: {
-        searchBlob: Buffer.from(new Float32Array(inputVector).buffer),
-      },
-      RETURN: ["score", "chunkId", "documentId"],
-      SORTBY: {
-        BY: "score",
-        // DIRECTION: "DESC"
-      },
-      DIALECT: 2,
-    });
+    try {
+      const query = `*=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
+
+      const searchParams = {
+        PARAMS: {
+          searchBlob: Buffer.from(new Float32Array(inputVector).buffer),
+        },
+        FILTER: documentIds ? `@documentId:{${documentIds.join('|')}}` : undefined,
+        RETURN: ["score", "chunkId", "documentId"],
+        SORTBY: {
+          BY: "score",
+        },
+        DIALECT: 2,
+      };
+
+      const results = await this.client.ft.search(INDEX_KEY, query, searchParams);
+      
+      if (!results || !results.documents) {
+        throw new Error('No results returned from Redis search');
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error in knnSearchEmbeddings:', error);
+      throw error;
+    }
   }
 }
 

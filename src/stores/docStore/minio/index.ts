@@ -149,34 +149,46 @@ class MinioDocStore implements DocStore {
     }
   }
 
-  //@QUESTION: should we pass in the document or just use the document id?
-  async retrieveChunks(documentId: string): Promise<Chunk[]> {
-    const chunksPath = `${documentId}/${
-      MinioDocStore.CHUNKS_FILE
-    }`;
+  async retrieveChunks(documentIds: string[]): Promise<Chunk[]> {
+    const allChunks: Chunk[] = [];
 
     const bucketExists = await this.client.bucketExists(this.bucketName);
     if (!bucketExists) {
       throw new Error(`Bucket "${this.bucketName}" does not exist.`);
     }
 
-    const chunks = await this.client.getObject(this.bucketName, chunksPath);
+    const chunkPromises = documentIds.map(async (documentId) => {
+      // Grab the chunk path
+      const chunksPath = `${documentId}/${MinioDocStore.CHUNKS_FILE}`;
 
-    const chunksString = await this.streamToString(chunks);
-    const chunksObject: Chunk[] = JSON.parse(chunksString);
+      try {
+        // Grab the chunks from the bucket
+        const chunks = await this.client.getObject(this.bucketName, chunksPath);
+        const chunksString = await this.streamToString(chunks);
 
-    if (!chunksObject) {
-      throw new Error(`No chunks found in bucket "${this.bucketName}"`);
+        // Parse the chunks and return them
+        return JSON.parse(chunksString) as Chunk[];
+      } catch (error) {
+        console.error(`Error retrieving chunks for document ${documentId}:`, error);
+        return [];
+      }
+    });
+
+    const chunksArrays = await Promise.all(chunkPromises);
+    allChunks.push(...chunksArrays.flat());
+
+    if (allChunks.length === 0) {
+      throw new Error(`No chunks found for the provided document IDs in bucket "${this.bucketName}"`);
     }
 
-    return chunksObject;
+    return allChunks;
   }
 
-  async queryFromEmbeddings(
+  async mergeChunksAndEmbeddings(
     embeddings: ScoredEmbedding[],
-    documentId: string
+    documentIds: string[]
   ): Promise<RelevantChunk[]> {
-    const chunks: Chunk[] = await this.retrieveChunks(documentId);
+    const chunks: Chunk[] = await this.retrieveChunks(documentIds);
 
     const relevantChunks = embeddings.map((embedding) => {
       return {

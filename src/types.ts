@@ -44,7 +44,11 @@ type RelevantChunk = {
 interface VectorStore {
   storeEmbeddings: (embeddings: Embedding[]) => Promise<void>;
   // retrieveEmbeddings: (chunkIds: string[]) => Promise<Embedding[]>;
-  queryEmbeddings: (query: number[], k: number) => Promise<ScoredEmbedding[]>;
+  queryEmbeddings: (params: {
+    query: number[];
+    k: number;
+    documentIds?: string[];
+  }) => Promise<ScoredEmbedding[]>;
   // deleteEmbeddings: (chunkIds: string[]) => Promise<void>;
 }
 
@@ -76,11 +80,11 @@ type DocStore = {
   deleteDocument: (documentId: string) => Promise<void>;
 
   //@TODO: broken - returns json object instead of Chunk[]
-  retrieveChunks: (documentId: string) => Promise<Chunk[]>;
+  retrieveChunks: (documentIds: string[]) => Promise<Chunk[]>;
 
-  queryFromEmbeddings: (
+  mergeChunksAndEmbeddings: (
     embeddings: ScoredEmbedding[],
-    documentId: string
+    documentIds: string[]
   ) => Promise<RelevantChunk[]>; // given a query embedding, return the chunks that are most relevant
 };
 

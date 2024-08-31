@@ -20,14 +20,20 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
     docStore,
     //@QUESTION we only use the  document id does it make sense to pass in the document? If we pass in doc id the call looks like
     //const relevantChunks = await ragger.query(query, document.getForgeMetadata().documentId, 5);
-    query: async (query: string, documentId: string, k: number = 3) => {
+    query: async (query: string, documentIds: string[], k: number = 3) => {
       const queryVector = await embedder.generateEmbedding(query);
-      const embeddings = await vectorStore.queryEmbeddings(queryVector, k);
+      const embeddings = await vectorStore.queryEmbeddings({
+        query: queryVector,
+        k,
+        documentIds,
+      });
+
+      console.log("embeddings", embeddings);
 
       // Get the chunks
-      const relevantChunks = await docStore.queryFromEmbeddings(
+      const relevantChunks = await docStore.mergeChunksAndEmbeddings(
         embeddings,
-        documentId
+        documentIds
       );
 
       return relevantChunks;
