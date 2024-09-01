@@ -28,8 +28,6 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
         documentIds,
       });
 
-      console.log("embeddings", embeddings);
-
       // Get the chunks
       const relevantChunks = await docStore.mergeChunksAndEmbeddings(
         embeddings,

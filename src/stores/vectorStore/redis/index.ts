@@ -5,7 +5,7 @@ import {
   SchemaFieldTypes,
   VectorAlgorithms,
 } from "redis";
-import { VectorStore } from "../../../types";
+import { Embedding, VectorStore } from "../../../types";
 const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
 
@@ -60,11 +60,7 @@ class RedisVectorStore implements VectorStore {
     });
   }
 
-  async addEmbedding(embedding: {
-    chunkId: string;
-    documentId: string;
-    embedding: number[];
-  }) {
+  async addEmbedding(embedding: Embedding) {
     return this.client.json.set(
       `${CHUNK_KEY_PREFIX}:${embedding.chunkId}`,
       "$",
@@ -76,9 +72,7 @@ class RedisVectorStore implements VectorStore {
     );
   }
 
-  async storeEmbeddings(
-    embeddings: { chunkId: string; documentId: string; embedding: number[] }[]
-  ) {
+  async storeEmbeddings(embeddings: Embedding[]) {
     await Promise.all(
       embeddings.map((embedding) => this.addEmbedding(embedding))
     );
@@ -112,13 +106,13 @@ class RedisVectorStore implements VectorStore {
     documentIds?: string[];
   }) {
     try {
-      const query = `*=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
+      const filter = documentIds ? `(@documentId:(${documentIds.map(id => `"${id}"`).join(' ')}))` : "*";
+      const query = `${filter}=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
 
       const searchParams = {
         PARAMS: {
           searchBlob: Buffer.from(new Float32Array(inputVector).buffer),
         },
-        FILTER: documentIds ? `@documentId:{${documentIds.join('|')}}` : undefined,
         RETURN: ["score", "chunkId", "documentId"],
         SORTBY: {
           BY: "score",

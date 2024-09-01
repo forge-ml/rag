@@ -8,9 +8,24 @@ import {
 } from "../../../types";
 import Document from "../../../documents/documents";
 
-const mergeDocuments = (existingDocument: Document, newDocument: Document): Document => {
-  return new Document(existingDocument.text + newDocument.text, existingDocument.metadata, existingDocument.forgeMetadata);
+const mergeDocuments = (
+  existingDocument: Document,
+  newDocument: Document
+): Document => {
+  return new Document(
+    existingDocument.text + newDocument.text,
+    existingDocument.metadata,
+    existingDocument.forgeMetadata
+  );
 };
+
+interface MinioDocStoreParams {
+  endpoint: string;
+  port?: number;
+  useSSL?: boolean;
+  accessKey: string;
+  secretKey: string;
+}
 
 class MinioDocStore implements DocStore {
   client: Client;
@@ -22,13 +37,13 @@ class MinioDocStore implements DocStore {
   chunksName = "chunks";
   private static readonly CHUNKS_FILE = "chunks";
 
-  constructor(
-    endpoint: string,
-    port: number,
-    useSSL: boolean,
-    accessKey: string,
-    secretKey: string
-  ) {
+  constructor({
+    endpoint,
+    port,
+    useSSL,
+    accessKey,
+    secretKey,
+  }: MinioDocStoreParams) {
     this.client = new Client({
       endPoint: endpoint,
       port: port,
@@ -85,17 +100,18 @@ class MinioDocStore implements DocStore {
     try {
       const document = await this.client.getObject(this.bucketName, docPath);
       const documentString = JSON.parse(await this.streamToString(document));
-      return new Document(documentString.text, documentString.metadata, documentString.forgeMetadata);
+      return new Document(
+        documentString.text,
+        documentString.metadata,
+        documentString.forgeMetadata
+      );
     } catch (error) {
       console.error("Error retrieving document:", error);
       throw error;
     }
   }
 
-  async updateDocument(
-    document: Document,
-    documentId: string
-  ): Promise<void> {
+  async updateDocument(document: Document, documentId: string): Promise<void> {
     const docPath = `${documentId}/${MinioDocStore.DOCUMENT_FILE}`;
     //@TODO fix - this is broken
     try {
@@ -169,7 +185,10 @@ class MinioDocStore implements DocStore {
         // Parse the chunks and return them
         return JSON.parse(chunksString) as Chunk[];
       } catch (error) {
-        console.error(`Error retrieving chunks for document ${documentId}:`, error);
+        console.error(
+          `Error retrieving chunks for document ${documentId}:`,
+          error
+        );
         return [];
       }
     });
@@ -178,7 +197,9 @@ class MinioDocStore implements DocStore {
     allChunks.push(...chunksArrays.flat());
 
     if (allChunks.length === 0) {
-      throw new Error(`No chunks found for the provided document IDs in bucket "${this.bucketName}"`);
+      throw new Error(
+        `No chunks found for the provided document IDs in bucket "${this.bucketName}"`
+      );
     }
 
     return allChunks;

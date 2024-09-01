@@ -31,11 +31,13 @@ interface Embedding {
 
 interface ScoredEmbedding {
   chunkId: string;
+  documentId: string;
   score: number;
 }
 
 //@TODO find a better name
 type RelevantChunk = {
+  documentId: string;
   chunkId: string;
   text: string;
   score: number;
