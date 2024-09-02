@@ -65,8 +65,8 @@ class RedisVectorStore implements VectorStore {
       `${CHUNK_KEY_PREFIX}:${embedding.chunkId}`,
       "$",
       {
-        chunkId: embedding.chunkId,
-        documentId: embedding.documentId,
+        chunkId: embedding.chunkId.replace(/[^a-zA-Z0-9]/g, "."),
+        documentId: embedding.documentId.replace(/[^a-zA-Z0-9]/g, "."),
         chunkEmbeddings: embedding.embedding,
       }
     );
@@ -90,8 +90,8 @@ class RedisVectorStore implements VectorStore {
     });
 
     return results.documents.map((doc) => ({
-      chunkId: doc.value.chunkId as string,
-      documentId: doc.value.documentId as string,
+      chunkId: doc.value.chunkId?.toString().replace(/[^a-zA-Z0-9]/g, "-") || "",
+      documentId: doc.value.documentId?.toString().replace(/[^a-zA-Z0-9]/g, "-") || "",
       score: doc.value.score as number,
     }));
   }
@@ -108,8 +108,8 @@ class RedisVectorStore implements VectorStore {
     try {
       let filter = "*";
       if (documentIds && documentIds.length > 0) {
-        const escapedIds = documentIds.map(id => `"${id.replace(/[^a-zA-Z0-9-]/g, '')}"`);
-        filter = `(@documentId:(${escapedIds.join('|')}))`;
+        const escapedIds = documentIds.map(id => id.replace(/[^a-zA-Z0-9]/g, "."));
+        filter = `@documentId:(${escapedIds.join('|')})`;
       }
       const query = `${filter}=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
 
