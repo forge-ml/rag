@@ -106,7 +106,11 @@ class RedisVectorStore implements VectorStore {
     documentIds?: string[];
   }) {
     try {
-      const filter = documentIds ? `(@documentId:(${documentIds.map(id => `"${id}"`).join('|')}))` : "*";
+      let filter = "*";
+      if (documentIds && documentIds.length > 0) {
+        const escapedIds = documentIds.map(id => `"${id.replace(/[^a-zA-Z0-9-]/g, '')}"`);
+        filter = `(@documentId:(${escapedIds.join('|')}))`;
+      }
       const query = `${filter}=>[KNN ${k} @chunkEmbeddings $searchBlob AS score]`;
 
       const searchParams = {
