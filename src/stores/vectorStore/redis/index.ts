@@ -6,23 +6,19 @@ import {
   VectorAlgorithms,
 } from "redis";
 import { Embedding, VectorStore } from "../../../types";
+import { VECTOR_MODEL_DIM } from "../types";
 const INDEX_KEY = "idx:chunks";
 const CHUNK_KEY_PREFIX = `chunks`;
 
-// small model is 1536, large model is 3072
-enum DIM {
-  OPENAI_SMALL = 1536,
-  OPENAI_LARGE = 3072,
-  NOMIC_V1_5 = 768,
-}
+
 
 //@TODO pass in the user's embedding model and adjust the DIM accordingly
-const GenericIndex: RediSearchSchema = {
+const GenericIndex: (dim: VECTOR_MODEL_DIM) => RediSearchSchema = (dim: VECTOR_MODEL_DIM) => ({
   "$.chunkEmbeddings": {
     type: SchemaFieldTypes.VECTOR,
     TYPE: "FLOAT32",
     ALGORITHM: VectorAlgorithms.FLAT,
-    DIM: DIM.NOMIC_V1_5, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small, 768 for nomic v1.5 embedder
+    DIM: dim, // this needs to be set to the dimesension set by the embedding model, 3072 for text-embedding-3-large or 1536 for text-embedding-3-small, 768 for nomic v1.5 embedder
     DISTANCE_METRIC: "L2",
     AS: "chunkEmbeddings",
   },
@@ -38,7 +34,12 @@ const GenericIndex: RediSearchSchema = {
     SORTABLE: true,
     AS: "documentId",
   },
-};
+});
+
+
+const defaultCreateIndexOpts = {
+  dim: VECTOR_MODEL_DIM.NOMIC_V1_5,
+}
 
 class RedisVectorStore implements VectorStore {
   client: RedisClientType;
@@ -48,13 +49,13 @@ class RedisVectorStore implements VectorStore {
     this.client.connect().catch(console.error);
   }
 
-  async createIndex() {
+  async createIndex(opts = defaultCreateIndexOpts) {
     try {
       await this.client.ft.dropIndex(INDEX_KEY).catch(() => {});
     } catch (indexErr) {
       console.error(indexErr);
     }
-    await this.client.ft.create(INDEX_KEY, GenericIndex, {
+    await this.client.ft.create(INDEX_KEY, GenericIndex(opts.dim), {
       ON: "JSON",
       PREFIX: CHUNK_KEY_PREFIX,
     });
@@ -73,6 +74,7 @@ class RedisVectorStore implements VectorStore {
   }
 
   async storeEmbeddings(embeddings: Embedding[]) {
+    
     await Promise.all(
       embeddings.map((embedding) => this.addEmbedding(embedding))
     );

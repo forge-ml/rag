@@ -8,6 +8,7 @@ import NomicEmbedder from "./embedders/nomicEmbedder";
 // Stores
 import Stores from "./stores/store";
 import RedisVectorStore from "./stores/vectorStore/redis/index";
+import PostgresVectorStore from "./stores/vectorStore/postgres/index";
 import MinioDocStore from "./stores/docStore/minio/index";
 
 // main
@@ -25,6 +26,6 @@ export { OpenAIEmbedder, NomicEmbedder };
 
 // Stores
 export { Stores };
-export { RedisVectorStore, MinioDocStore };
+export { RedisVectorStore, MinioDocStore, PostgresVectorStore };
 
 export default createRagger;
