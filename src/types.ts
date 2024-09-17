@@ -1,4 +1,5 @@
 import Document from "./documents/documents";
+import { VECTOR_MODEL_DIM } from "./stores/vectorStore/types";
 
 interface Metadata {
   documentId: string;
@@ -43,6 +44,10 @@ type RelevantChunk = {
   score: number;
 };
 
+type CreateIndexOpts = {
+  dim: VECTOR_MODEL_DIM;
+}
+
 interface VectorStore {
   storeEmbeddings: (embeddings: Embedding[]) => Promise<void>;
   // retrieveEmbeddings: (chunkIds: string[]) => Promise<Embedding[]>;
@@ -51,6 +56,7 @@ interface VectorStore {
     k: number;
     documentIds?: string[];
   }) => Promise<ScoredEmbedding[]>;
+  createIndex: (opts?: CreateIndexOpts) => Promise<void>;
   // deleteEmbeddings: (chunkIds: string[]) => Promise<void>;
 }
 
@@ -75,10 +81,7 @@ type DocStore = {
   retrieveDocument: (documentId: string) => Promise<DocumentClass>;
 
   //@TODO: broken - find a way to update the document content without updating the id
-  updateDocument: (
-    document: Document,
-    documentId: string
-  ) => Promise<void>;
+  updateDocument: (document: Document, documentId: string) => Promise<void>;
   deleteDocument: (documentId: string) => Promise<void>;
 
   //@TODO: broken - returns json object instead of Chunk[]
@@ -110,19 +113,31 @@ enum ChunkingStrategy {
   BY_SENTENCE = "by_sentence",
   BY_ITEM_IN_LIST = "by_item_in_list",
   BY_CUSTOM_DELIMITER = "by_custom_delimiter",
+  BY_WORD_COUNT = "by_word_count",
+  BY_DOCUMENT = "by_document",
 }
 
-type InitializeDocumentOptions =
-  | {
-      strategy: Exclude<ChunkingStrategy, ChunkingStrategy.BY_CUSTOM_DELIMITER>;
-      delimiter?: undefined;
-    }
+type StrategiesWithOptions =
   | {
       strategy: ChunkingStrategy.BY_CUSTOM_DELIMITER;
       delimiter: string;
+      wordCount?: undefined;
+    }
+  | {
+      strategy: ChunkingStrategy.BY_WORD_COUNT;
+      wordCount: number;
+      delimiter?: undefined;
     };
 
-export { ChunkingStrategy  };
+type InitializeDocumentOptions =
+  | {
+      strategy: Exclude<ChunkingStrategy, StrategiesWithOptions["strategy"]>;
+      delimiter?: undefined;
+      wordCount?: undefined;
+    }
+  | StrategiesWithOptions;
+
+export { ChunkingStrategy };
 
 export type {
   Chunk,

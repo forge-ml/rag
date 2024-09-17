@@ -42,8 +42,9 @@ const createRagger = (embedder: Embedder, stores: StoresClass) => {
     ) => {
       // chunk the document
       const chunks: Chunk[] = chunkText(document, {
-        strategy: options?.strategy || ChunkingStrategy.BY_SENTENCE,
+        strategy: options?.strategy || ChunkingStrategy.BY_WORD_COUNT,
         delimiter: options?.delimiter,
+        wordCount: options?.wordCount,
       });
 
       // embed the chunks

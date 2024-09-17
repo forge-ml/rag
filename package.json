@@ -27,8 +27,11 @@
   "license": "ISC",
   "dependencies": {
     "@nomic-ai/atlas": "^0.10.1",
+    "@turbopuffer/turbopuffer": "^0.5.10",
+    "@types/pg": "^8.11.8",
     "minio": "^8.0.1",
     "openai": "^4.56.1",
+    "pg": "^8.12.0",
     "redis": "^4.7.0"
   },
   "devDependencies": {
